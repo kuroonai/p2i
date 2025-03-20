@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 PDF to Image GUI Converter
-Based on original work by Naveen Kumar Vasudevan
+Based on original work by Naveen Kumar Vasudevan and the package pdf2image
 Enhanced with GUI and additional features
 """
 
