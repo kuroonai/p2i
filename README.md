@@ -4,7 +4,7 @@ This guide explains how to install and use the PDF to Image GUI Converter applic
 
 ## Prerequisites
 
-The application requires Python 3.6 or higher and several dependencies.
+The application requires Python 3.9 or higher and several dependencies.
 
 ## Installation
 
