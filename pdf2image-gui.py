@@ -29,10 +29,16 @@ class ConverterGUI:
         screen_width = root.winfo_screenwidth()
         screen_height = root.winfo_screenheight()
         
-        # Set window size to screen dimensions (with small margin)
-        geometry = f"{screen_width-300}x{screen_height-400}"
-        self.root.geometry(geometry)
+        # Set window dimensions
+        window_width = int(screen_width * 0.8)  # 80% of screen width
+        window_height = int(screen_height * 0.8)  # 80% of screen height
         
+        # Calculate position to center window
+        position_top = int((screen_height - window_height)/2)
+        position_left = int((screen_width - window_width)/2)
+        
+        # Set window size and position
+        self.root.geometry(f"{window_width}x{window_height}+{position_left}+{position_top}")        
         self.root.configure(bg="#f0f0f0")
         
         # Create tab control
