@@ -24,7 +24,7 @@ class ConverterGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("PDF & Image Converter")
-        self.iconbitmap("p2i.ico")
+        self.root.iconbitmap("p2i.ico")
         
         # Get screen width and height
         screen_width = root.winfo_screenwidth()
