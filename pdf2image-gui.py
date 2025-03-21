@@ -30,7 +30,7 @@ class ConverterGUI:
         screen_height = root.winfo_screenheight()
         
         # Set window size to screen dimensions (with small margin)
-        geometry = f"{screen_width-50}x{screen_height-100}+25+25"
+        geometry = f"{screen_width-50}x{screen_height-100}"
         self.root.geometry(geometry)
         
         self.root.configure(bg="#f0f0f0")
