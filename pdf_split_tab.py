@@ -171,8 +171,9 @@ class PDFSplitTab:
             # Update UI in the main thread
             self.frame.winfo_toplevel().after(0, self._update_page_count_ui)
         except Exception as e:
-            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to get page count: {str(e)}"))
-            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {str(e)}"))
+            error_msg = str(e)
+            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to get page count: {error_msg}"))
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {error_msg}"))
     
     def _update_page_count_ui(self):
         self.end_page.set(self.total_pages)
@@ -264,8 +265,9 @@ class PDFSplitTab:
                 self._split_by_interval()
                 
         except Exception as e:
-            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to split PDF: {str(e)}"))
-            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {str(e)}"))
+            error_msg = str(e)
+            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to split PDF: {error_msg}"))
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {error_msg}"))
         finally:
             # Re-enable controls
             self.frame.winfo_toplevel().after(0, lambda: utils.set_controls_state(self.frame, tk.NORMAL))
@@ -286,11 +288,13 @@ class PDFSplitTab:
             output_path = os.path.join(self.output_dir.get(), output_filename)
             
             # Open source PDF
-            pdf = pdfium.PdfDocument(self.pdf_path.get())
+            source_pdf = pdfium.PdfDocument(self.pdf_path.get())
             
-            # Create new PDF with selected pages
-            new_pdf = pdfium.PdfDocument.new()
+            # Use PyPDF's split_page method, not import_page
+            # First, create a new empty document
+            output_pdf = pdfium.PdfDocument.new()
             
+            # Copy pages from source to output
             for i, page_idx in enumerate(range(start-1, end)):
                 if self.conversion_canceled:
                     self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Splitting canceled"))
@@ -298,16 +302,19 @@ class PDFSplitTab:
                 
                 # Update progress
                 progress_pct = ((i + 1) / (end - start + 1)) * 100
+                current_page = page_idx + 1
                 self.frame.winfo_toplevel().after(0, lambda p=progress_pct: self.progress_var.set(p))
-                self.frame.winfo_toplevel().after(0, lambda p=page_idx+1: 
+                self.frame.winfo_toplevel().after(0, lambda p=current_page: 
                     self.status_var.set(f"Processing page {p}..."))
                 
-                # Get page and import it to new PDF
-                page = pdf[page_idx]
-                new_pdf.import_page(page)
+                # Get the page from source document
+                page = source_pdf[page_idx]
+                
+                # Add the page to the output document using the correct method
+                output_pdf.import_pages([page])
             
             # Save the new PDF
-            new_pdf.save(output_path)
+            output_pdf.save(output_path)
             
             # Complete
             self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
@@ -316,7 +323,8 @@ class PDFSplitTab:
                 f"PDF split successfully.\nPages {start}-{end} extracted.\nSaved to: {output_path}"))
             
         except Exception as e:
-            raise Exception(f"Failed to split PDF by range: {str(e)}")
+            error_msg = str(e)
+            raise Exception(f"Failed to split PDF by range: {error_msg}")
     
     def _split_single_pages(self):
         """Extract specific pages from PDF"""
@@ -335,10 +343,10 @@ class PDFSplitTab:
             output_path = os.path.join(self.output_dir.get(), output_filename)
             
             # Open source PDF
-            pdf = pdfium.PdfDocument(self.pdf_path.get())
+            source_pdf = pdfium.PdfDocument(self.pdf_path.get())
             
             # Create new PDF with selected pages
-            new_pdf = pdfium.PdfDocument.new()
+            output_pdf = pdfium.PdfDocument.new()
             
             for i, page_num in enumerate(self._pages_to_extract):
                 if self.conversion_canceled:
@@ -351,12 +359,12 @@ class PDFSplitTab:
                 self.frame.winfo_toplevel().after(0, lambda p=page_num: 
                     self.status_var.set(f"Processing page {p}..."))
                 
-                # Get page and import it to new PDF
-                page = pdf[page_num - 1]  # 0-based index
-                new_pdf.import_page(page)
+                # Get page and add it to the output document
+                page = source_pdf[page_num - 1]  # 0-based index
+                output_pdf.import_pages([page])
             
             # Save the new PDF
-            new_pdf.save(output_path)
+            output_pdf.save(output_path)
             
             # Complete
             self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
@@ -365,7 +373,8 @@ class PDFSplitTab:
                 f"Pages extracted successfully.\n{len(self._pages_to_extract)} pages extracted.\nSaved to: {output_path}"))
             
         except Exception as e:
-            raise Exception(f"Failed to extract pages: {str(e)}")
+            error_msg = str(e)
+            raise Exception(f"Failed to extract pages: {error_msg}")
     
     def _split_by_interval(self):
         """Extract every Nth page from PDF"""
@@ -382,13 +391,13 @@ class PDFSplitTab:
             output_path = os.path.join(self.output_dir.get(), output_filename)
             
             # Open source PDF
-            pdf = pdfium.PdfDocument(self.pdf_path.get())
+            source_pdf = pdfium.PdfDocument(self.pdf_path.get())
             
             # Create list of pages to extract
             pages_to_extract = list(range(0, self.total_pages, interval))
             
             # Create new PDF with selected pages
-            new_pdf = pdfium.PdfDocument.new()
+            output_pdf = pdfium.PdfDocument.new()
             
             for i, page_idx in enumerate(pages_to_extract):
                 if self.conversion_canceled:
@@ -397,16 +406,17 @@ class PDFSplitTab:
                 
                 # Update progress
                 progress_pct = ((i + 1) / len(pages_to_extract)) * 100
+                current_page = page_idx + 1
                 self.frame.winfo_toplevel().after(0, lambda p=progress_pct: self.progress_var.set(p))
-                self.frame.winfo_toplevel().after(0, lambda p=page_idx+1: 
+                self.frame.winfo_toplevel().after(0, lambda p=current_page: 
                     self.status_var.set(f"Processing page {p}..."))
                 
-                # Get page and import it to new PDF
-                page = pdf[page_idx]
-                new_pdf.import_page(page)
+                # Get page and add it to the output document
+                page = source_pdf[page_idx]
+                output_pdf.import_pages([page])
             
             # Save the new PDF
-            new_pdf.save(output_path)
+            output_pdf.save(output_path)
             
             # Complete
             self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
@@ -415,7 +425,8 @@ class PDFSplitTab:
                 f"Pages extracted successfully.\n{len(pages_to_extract)} pages extracted.\nSaved to: {output_path}"))
             
         except Exception as e:
-            raise Exception(f"Failed to extract pages: {str(e)}")
+            error_msg = str(e)
+            raise Exception(f"Failed to extract pages: {error_msg}")
     
     def cancel_split(self):
         self.conversion_canceled = True

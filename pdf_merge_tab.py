@@ -218,7 +218,8 @@ class PDFMergeTab:
                 text=f"Selected PDFs: {len(self.pdf_paths)} | Total Pages: {total_pages}"))
             self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Page count complete"))
         except Exception as e:
-            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error counting pages: {str(e)}"))
+            error_msg = str(e)
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error counting pages: {error_msg}"))
     
     def start_merge(self):
         if not self.pdf_paths:
@@ -280,8 +281,9 @@ class PDFMergeTab:
                 
                 # Update progress
                 progress_pct = ((i + 1) / total_pdfs) * 100
+                current_file = os.path.basename(pdf_path)
                 self.frame.winfo_toplevel().after(0, lambda p=progress_pct: self.progress_var.set(p))
-                self.frame.winfo_toplevel().after(0, lambda p=i+1, t=total_pdfs, f=os.path.basename(pdf_path): 
+                self.frame.winfo_toplevel().after(0, lambda p=i+1, t=total_pdfs, f=current_file: 
                     self.status_var.set(f"Processing {p}/{t}: {f}"))
                 
                 # Open source PDF
@@ -289,11 +291,12 @@ class PDFMergeTab:
                     pdf = pdfium.PdfDocument(pdf_path)
                     
                     # Import all pages from this PDF
-                    for page_idx in range(len(pdf)):
-                        page = pdf[page_idx]
-                        imported_page = merger.import_page(page)
+                    # Use the correct method for importing pages
+                    pages = [pdf[page_idx] for page_idx in range(len(pdf))]
+                    merger.import_pages(pages)
                 except Exception as e:
-                    self.frame.winfo_toplevel().after(0, lambda f=os.path.basename(pdf_path), err=str(e): 
+                    error_msg = str(e)
+                    self.frame.winfo_toplevel().after(0, lambda f=current_file, err=error_msg: 
                         messagebox.showwarning("Warning", f"Failed to process {f}: {err}"))
                     continue
             
@@ -307,8 +310,9 @@ class PDFMergeTab:
                 f"PDFs merged successfully.\n{total_pdfs} PDFs combined.\nSaved to: {output_path}"))
             
         except Exception as e:
-            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to merge PDFs: {str(e)}"))
-            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {str(e)}"))
+            error_msg = str(e)
+            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to merge PDFs: {error_msg}"))
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {error_msg}"))
             # Delete partial output
             if os.path.exists(output_path):
                 try:
