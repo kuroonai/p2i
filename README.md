@@ -1,6 +1,11 @@
-# PDF to Image GUI Converter - Installation Guide
+# PDF Utils - Advanced PDF Processing GUI
 
-This guide explains how to install and use the PDF to Image GUI Converter application.
+This application provides a comprehensive GUI for PDF and image operations, including:
+- PDF to Image conversion
+- Image to PDF conversion
+- PDF merging
+- PDF splitting
+- PDF compression (with multiple compression methods)
 
 ## Prerequisites
 
@@ -11,33 +16,36 @@ The application requires Python 3.9 or higher and several dependencies.
 ### Step 1: Install Required OS Dependencies
 
 #### On Windows
-
-No additional OS dependencies are required.
+1. For basic functionality, no additional OS dependencies are required.
+2. For enhanced PDF compression, install Ghostscript:
+   - Download from the [official website](https://www.ghostscript.com/releases/gsdnld.html)
+   - Choose the appropriate version (32-bit or 64-bit)
+   - Run the installer and follow the wizard
 
 #### On macOS
-
 ```bash
 brew install poppler
+brew install ghostscript  # For enhanced PDF compression
 ```
 
 #### On Linux (Ubuntu/Debian)
-
 ```bash
 sudo apt-get update
 sudo apt-get install -y poppler-utils
+sudo apt-get install -y ghostscript  # For enhanced PDF compression
 ```
 
 ### Step 2: Create a Virtual Environment (Optional but Recommended)
 
 ```bash
 # Create a virtual environment
-python -m venv pdf2image-env
+python -m venv pdfutils-env
 
 # Activate the virtual environment
 # On Windows:
-pdf2image-env\Scripts\activate
+pdfutils-env\Scripts\activate
 # On macOS/Linux:
-source pdf2image-env/bin/activate
+source pdfutils-env/bin/activate
 ```
 
 ### Step 3: Install Python Requirements
@@ -51,85 +59,84 @@ pip install -r requirements.txt
 After installation, you can run the application:
 
 ```bash
-python pdf2image_gui.py
+python main.py
 ```
 
 ## Features
 
-The PDF to Image GUI Converter includes the following features:
+### PDF to Image Conversion
+- Convert entire PDFs or specific page ranges to images
+- Support for various image formats (JPG, PNG, TIFF, BMP)
+- Adjustable DPI and quality settings
+- Batch processing mode for multiple PDFs
 
-1. **User-Friendly Interface**: Easy-to-use GUI for converting PDF files to images
-2. **Batch Processing**: Convert multiple PDF files at once
-3. **Page Range Selection**: Convert specific pages or page ranges
-4. **Preview**: Preview pages before conversion
-5. **Multiple Output Formats**: Save as JPG, PNG, TIFF, or BMP
-6. **Quality Control**: Adjust DPI and image quality
-7. **Multi-threading**: Utilize multiple CPU cores for faster conversion
-8. **Progress Tracking**: Monitor conversion progress
-9. **Error Handling**: Robust error handling with informative messages
+### Image to PDF Conversion
+- Create PDFs from multiple image files
+- Rearrange images before conversion
+- Set page size, orientation, and margins
+- Adjust image quality in the resulting PDF
 
-## Usage Examples
+### PDF Merging
+- Combine multiple PDFs into a single document
+- Rearrange PDFs before merging
+- Automatic page counting and information display
 
-### Converting a Single PDF
+### PDF Splitting
+- Extract specific page ranges
+- Extract individual pages by number
+- Extract every Nth page
+- Create new PDFs with selected content
 
-1. Click "Browse..." to select your PDF file
-2. Set the output directory
-3. Choose your desired settings (DPI, format, quality)
-4. Click "Convert"
+### PDF Compression
+- Multiple compression methods:
+  - Ghostscript-based compression (best quality and results)
+  - Direct compression with PyPDF2 (best for text-heavy PDFs)
+  - Image-based compression (good for graphics-heavy PDFs)
+- Three compression levels (low, medium, high)
+- Automatic PDF content analysis for optimal compression method selection
+- Size reduction information display
 
-### Batch Processing
+## Compression Methods Explained
 
-1. Check the "Batch Mode" checkbox
-2. Click "Browse..." to select a folder containing multiple PDFs
-3. Set the output directory
-4. Adjust settings as needed
-5. Click "Convert"
+The application offers several compression strategies:
 
-### Previewing Pages
+1. **Ghostscript Compression**: Uses the industry-standard Ghostscript tool with optimized presets. This usually provides the best compression while maintaining quality. Requires Ghostscript to be installed on your system.
 
-1. Select your PDF file
-2. Click "Get Page Count" to detect all pages
-3. Enter the page number you want to preview
-4. Click "Preview Page"
+2. **Direct Compression**: Preserves text quality while compressing embedded images and content streams. Best for text-heavy documents like reports or articles.
+
+3. **Image-based Compression**: Converts PDF pages to compressed images before creating a new PDF. This can achieve high compression ratios but may reduce text quality. Best for PDFs with many graphics.
+
+The application automatically analyzes your PDF and suggests the best method, but you can override this choice if needed.
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **PDF Conversion Fails**
-
-   - Ensure you have installed poppler (on macOS/Linux)
+   - Ensure you have installed all required dependencies
    - Check if the PDF is password-protected
    - Try with a lower DPI setting for very large PDFs
-2. **Missing Output Images**
 
+2. **Missing Output Files**
    - Verify you have write permissions for the output directory
    - Check if the output folder exists
-3. **Application Freezes**
 
-   - For very large PDFs, the application may appear to freeze during page counting
+3. **Application Freezes**
+   - For very large PDFs, the application may appear to freeze during processing
    - Be patient or try processing fewer pages at once
+
+4. **Poor Compression Results**
+   - Install Ghostscript for best compression results
+   - Try different compression methods for different types of PDFs
+   - Some PDFs may already be highly optimized and won't compress further
 
 ### Error Messages
 
 If you encounter error messages, they will appear in dialog boxes with details about the issue. Most common errors are related to:
-
 - Invalid file paths
 - File permission issues
 - Memory limitations with very large files
-
-## Advanced Usage
-
-### Command Line Arguments (Optional)
-
-The GUI application also supports command line arguments for advanced users:
-
-```bash
-python pdf2image_gui.py [pdf_path] [output_dir]
-```
-
-- `pdf_path`: Path to PDF file or directory (optional)
-- `output_dir`: Path to output directory (optional)
+- Missing dependencies
 
 ## License
 
