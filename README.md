@@ -11,14 +11,17 @@ The application requires Python 3.9 or higher and several dependencies.
 ### Step 1: Install Required OS Dependencies
 
 #### On Windows
+
 No additional OS dependencies are required.
 
 #### On macOS
+
 ```bash
 brew install poppler
 ```
 
 #### On Linux (Ubuntu/Debian)
+
 ```bash
 sudo apt-get update
 sudo apt-get install -y poppler-utils
@@ -94,21 +97,23 @@ The PDF to Image GUI Converter includes the following features:
 ### Common Issues
 
 1. **PDF Conversion Fails**
+
    - Ensure you have installed poppler (on macOS/Linux)
    - Check if the PDF is password-protected
    - Try with a lower DPI setting for very large PDFs
-
 2. **Missing Output Images**
+
    - Verify you have write permissions for the output directory
    - Check if the output folder exists
-
 3. **Application Freezes**
+
    - For very large PDFs, the application may appear to freeze during page counting
    - Be patient or try processing fewer pages at once
 
 ### Error Messages
 
 If you encounter error messages, they will appear in dialog boxes with details about the issue. Most common errors are related to:
+
 - Invalid file paths
 - File permission issues
 - Memory limitations with very large files
