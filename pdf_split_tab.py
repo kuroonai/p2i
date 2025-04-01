@@ -307,11 +307,7 @@ class PDFSplitTab:
                 self.frame.winfo_toplevel().after(0, lambda p=current_page: 
                     self.status_var.set(f"Processing page {p}..."))
                 
-                # Get the page from source document
-                page = source_pdf[page_idx]
-                
-                # Add the page to the output document using the correct method
-                output_pdf.import_pages([page])
+                output_pdf.import_pages(source_pdf, [page_idx])
             
             # Save the new PDF
             output_pdf.save(output_path)
@@ -360,8 +356,7 @@ class PDFSplitTab:
                     self.status_var.set(f"Processing page {p}..."))
                 
                 # Get page and add it to the output document
-                page = source_pdf[page_num - 1]  # 0-based index
-                output_pdf.import_pages([page])
+                output_pdf.import_pages(source_pdf, [page_num - 1])
             
             # Save the new PDF
             output_pdf.save(output_path)
@@ -412,8 +407,7 @@ class PDFSplitTab:
                     self.status_var.set(f"Processing page {p}..."))
                 
                 # Get page and add it to the output document
-                page = source_pdf[page_idx]
-                output_pdf.import_pages([page])
+                output_pdf.import_pages(source_pdf, [page_idx])
             
             # Save the new PDF
             output_pdf.save(output_path)

@@ -290,10 +290,8 @@ class PDFMergeTab:
                 try:
                     pdf = pdfium.PdfDocument(pdf_path)
                     
-                    # Import all pages from this PDF
-                    # Use the correct method for importing pages
-                    pages = [pdf[page_idx] for page_idx in range(len(pdf))]
-                    merger.import_pages(pages)
+                    # Import all pages from this PDF - correctly pass pages as a list of indices
+                    merger.import_pages(pdf)
                 except Exception as e:
                     error_msg = str(e)
                     self.frame.winfo_toplevel().after(0, lambda f=current_file, err=error_msg: 
