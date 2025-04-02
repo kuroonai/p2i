@@ -1,11 +1,14 @@
-# PDF Utils - Advanced PDF Processing GUI
+# p2i - Advanced PDF & Image Processing Tool
 
-This application provides a comprehensive GUI for PDF and image operations, including:
+p2i (PDF & Image) is a comprehensive GUI application for PDF and image operations, including:
 - PDF to Image conversion
 - Image to PDF conversion
 - PDF merging
 - PDF splitting
-- PDF compression (with multiple compression methods)
+- PDF compression (with multiple methods)
+- PDF security & watermarking
+- Image batch processing
+- Office document & Markdown to PDF conversion
 
 ## Prerequisites
 
@@ -35,20 +38,59 @@ sudo apt-get install -y poppler-utils
 sudo apt-get install -y ghostscript  # For enhanced PDF compression
 ```
 
-### Step 2: Create a Virtual Environment (Optional but Recommended)
+### Step 2: Install Optional Dependencies
+
+For Office document and Markdown conversion:
+```bash
+# Install LibreOffice (for Office documents)
+# On Windows: Download and install from libreoffice.org
+# On macOS:
+brew install libreoffice
+
+# On Linux:
+sudo apt-get install -y libreoffice
+
+# Install Pandoc (for Markdown)
+# On Windows: Download and install from pandoc.org
+# On macOS:
+brew install pandoc
+
+# On Linux:
+sudo apt-get install -y pandoc
+```
+
+### Step 3: Create a Virtual Environment (Optional but Recommended)
+
+#### Using venv
 
 ```bash
 # Create a virtual environment
-python -m venv pdfutils-env
+python -m venv p2i-env
 
 # Activate the virtual environment
 # On Windows:
-pdfutils-env\Scripts\activate
+p2i-env\Scripts\activate
 # On macOS/Linux:
-source pdfutils-env/bin/activate
+source p2i-env/bin/activate
 ```
 
-### Step 3: Install Python Requirements
+#### Using Conda
+
+```bash
+# Create a new conda environment
+conda create -n p2i python=3.9
+
+# Activate the environment
+conda activate p2i
+
+# Install conda packages (when available)
+conda install -c conda-forge pillow pypdf2 reportlab tk
+
+# Some packages might need pip
+pip install pdf2image pypdfium2 tqdm
+```
+
+### Step 4: Install Python Requirements
 
 ```bash
 pip install -r requirements.txt
@@ -61,6 +103,21 @@ After installation, you can run the application:
 ```bash
 python main.py
 ```
+
+For convenience, you can also create a launcher script:
+
+**Windows (launch.bat)**:
+```bat
+@echo off
+start pythonw main.py
+```
+
+**macOS/Linux (launch.sh)**:
+```bash
+#!/bin/bash
+python main.py &
+```
+Make it executable: `chmod +x launch.sh`
 
 ## Features
 
@@ -96,17 +153,29 @@ python main.py
 - Automatic PDF content analysis for optimal compression method selection
 - Size reduction information display
 
-## Compression Methods Explained
+### PDF Security & Watermarking
+- Password protection with owner/user passwords
+- Permission controls (printing, copying, modification)
+- Text and image watermarks with customizable position, opacity, and rotation
 
-The application offers several compression strategies:
+### Image Batch Processing
+- Resize images with various options (percentage, dimensions, maximum dimension)
+- Convert between different image formats
+- Adjust brightness, contrast, and sharpness
+- Apply image filters
+- Optimize images for web/storage
 
-1. **Ghostscript Compression**: Uses the industry-standard Ghostscript tool with optimized presets. This usually provides the best compression while maintaining quality. Requires Ghostscript to be installed on your system.
+### Office Document & Markdown Conversion
+- Convert Word documents to PDF
+- Convert Excel spreadsheets to PDF
+- Convert PowerPoint presentations to PDF
+- Convert Markdown to PDF with styling options
 
-2. **Direct Compression**: Preserves text quality while compressing embedded images and content streams. Best for text-heavy documents like reports or articles.
-
-3. **Image-based Compression**: Converts PDF pages to compressed images before creating a new PDF. This can achieve high compression ratios but may reduce text quality. Best for PDFs with many graphics.
-
-The application automatically analyzes your PDF and suggests the best method, but you can override this choice if needed.
+## User Interface Improvements
+- Drag and drop file support
+- Recent files history
+- Customizable preferences
+- File operation dialogs
 
 ## Troubleshooting
 
@@ -129,6 +198,10 @@ The application automatically analyzes your PDF and suggests the best method, bu
    - Install Ghostscript for best compression results
    - Try different compression methods for different types of PDFs
    - Some PDFs may already be highly optimized and won't compress further
+
+5. **Office Document Conversion Issues**
+   - Ensure LibreOffice is installed and accessible from the command line
+   - Check that the document isn't corrupt or password-protected
 
 ### Error Messages
 
