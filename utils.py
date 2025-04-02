@@ -59,8 +59,8 @@ def display_preview(canvas, img, photo_ref):
     # Calculate center position
     canvas_width = canvas.winfo_width()
     canvas_height = canvas.winfo_height()
-    x_pos = (canvas_width - width) // 2
-    y_pos = (canvas_height - height) // 2
+    x_pos = (canvas_width - new_width) // 2
+    y_pos = (canvas_height - new_height) // 2
     
     # Create image on canvas
     canvas.create_image(x_pos, y_pos, anchor=tk.NW, image=photo)

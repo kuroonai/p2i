@@ -149,7 +149,30 @@ python main.py &
 ```
 Make it executable: `chmod +x launch.sh`
 
-## Features
+## Additional Requirements
+
+### Optional Dependencies
+
+#### Drag and Drop Support (TkinterDnD)
+
+To enable drag and drop functionality, you need to install the TkinterDnD2 library:
+
+**Windows:**
+```bash
+pip install tkinterdnd2
+```
+
+**macOS/Linux:**
+```bash
+# For Python 3.x
+pip install tkinterdnd2
+
+# If you're using a specific conda/mamba environment:
+conda activate p2i
+pip install tkinterdnd2
+```
+
+If you see the error "TkinterDnD not available. Drag and drop disabled", it means this library isn't installed or properly configured. The application will still work, but without drag and drop capabilities.
 
 ### PDF to Image Conversion
 - Convert entire PDFs or specific page ranges to images

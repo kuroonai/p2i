@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter.filedialog import askopenfilename, askdirectory
 import multiprocessing
+from pathlib import Path 
 
 # Import all tab modules
 from pdf_merge_tab import PDFMergeTab
@@ -59,6 +60,8 @@ class P2IApp:
         
         # Create main menu
         self.create_menu()
+
+        self.apply_settings()
         
         # Set up drag and drop
         self.setup_drag_drop()
@@ -66,6 +69,35 @@ class P2IApp:
         # Handle application close
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
     
+    def setup_drag_drop(self):
+        """Set up drag and drop functionality"""
+        # Create list of widgets to receive dropped files
+        drop_targets = [
+            self.pdf_merge_tab.frame,
+            self.pdf_split_tab.frame,
+            self.pdf_compress_tab.frame,
+            self.pdf_to_image_tab.frame,
+            self.image_to_pdf_tab.frame,
+            self.pdf_security_tab.frame,
+            self.image_batch_tab.frame,
+            self.office_convert_tab.frame
+        ]
+        
+        # Initialize drag-drop manager
+        self.dnd_manager = DragDropManager(self.root, self.settings, drop_targets)
+        
+        # Show a status message about drag and drop availability
+        if not self.dnd_manager.is_available():
+            print("TkinterDnD not available. Drag and drop disabled.")
+            # You could also show this in the UI
+            self.status_bar = ttk.Label(self.root, text="Drag and Drop disabled. Install tkinterdnd2 to enable this feature.")
+            self.status_bar.pack(side="bottom", fill="x", padx=5, pady=2)
+        else:
+            print("Drag and Drop enabled")
+            # Optional: show enabled status
+            self.status_bar = ttk.Label(self.root, text="Drag and Drop enabled")
+            self.status_bar.pack(side="bottom", fill="x", padx=5, pady=2)
+
     def create_menu(self):
         menubar = tk.Menu(self.root)
         
@@ -500,34 +532,90 @@ class P2IApp:
         ttk.Button(btn_frame, text="Cancel", 
                  command=dialog.destroy).pack(side="right", padx=5)
         
-        def save_preferences():
-            # Update settings
-            self.settings.settings['theme'] = theme_var.get()
-            self.settings.settings['max_recent_files'] = max_recent_var.get()
-            self.settings.settings['confirm_overwrite'] = confirm_overwrite_var.get()
-            self.settings.settings['remember_last_directory'] = remember_dir_var.get()
-            self.settings.settings['default_output_dir'] = pdf_dir_var.get()
-            self.settings.settings['default_image_output_dir'] = img_dir_var.get()
-            
-            # Save settings
-            self.settings.save_settings()
-            
-            # Update UI if needed
-            self.update_recent_files_menu()
-            
-            dialog.destroy()
-            messagebox.showinfo("Success", "Preferences saved successfully.")
+    def save_preferences(self):
+        # Update settings
+        self.settings.settings['theme'] = theme_var.get()
+        self.settings.settings['max_recent_files'] = max_recent_var.get()
+        self.settings.settings['confirm_overwrite'] = confirm_overwrite_var.get()
+        self.settings.settings['remember_last_directory'] = remember_dir_var.get()
+        self.settings.settings['default_output_dir'] = pdf_dir_var.get()
+        self.settings.settings['default_image_output_dir'] = img_dir_var.get()
         
-        ttk.Button(btn_frame, text="Save", 
-                 command=save_preferences).pack(side="right", padx=5)
+        # Save settings
+        self.settings.save_settings()
         
-        # Center the dialog
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+        # Apply settings to current application state
+        self.apply_settings()
+        
+        # Update UI if needed
+        self.update_recent_files_menu()
+        
+        dialog.destroy()
+        messagebox.showinfo("Success", "Preferences saved successfully.")
+
+    def apply_settings(self):
+        """Apply current settings to the application"""
+        # Apply theme if changed
+        theme = self.settings.settings.get('theme', 'default')
+        self._apply_theme(theme)
+        
+        # Update recent files max limit
+        # Already handled by self.update_recent_files_menu()
+        
+        # Update default directories in each tab that uses them
+        default_output_dir = self.settings.settings.get('default_output_dir')
+        default_image_dir = self.settings.settings.get('default_image_output_dir')
+        
+        # Only update if the directory exists
+        if default_output_dir and os.path.isdir(default_output_dir):
+            # Update output directory in PDF-related tabs
+            tabs_with_pdf_output = [
+                self.pdf_merge_tab,
+                self.pdf_split_tab,
+                self.pdf_compress_tab,
+                self.pdf_security_tab,
+                self.office_convert_tab
+            ]
+            for tab in tabs_with_pdf_output:
+                if hasattr(tab, 'output_dir') and not tab.output_dir.get():
+                    tab.output_dir.set(default_output_dir)
+        
+        if default_image_dir and os.path.isdir(default_image_dir):
+            # Update output directory in image-related tabs
+            tabs_with_image_output = [
+                self.pdf_to_image_tab,
+                self.image_batch_tab
+            ]
+            for tab in tabs_with_image_output:
+                if hasattr(tab, 'output_dir') and not tab.output_dir.get():
+                    tab.output_dir.set(default_image_dir)
+
+    def _apply_theme(self, theme_name):
+        """Apply the selected theme to the application"""
+        if theme_name == 'default':
+            style = ttk.Style()
+            style.theme_use('default')
+        elif theme_name == 'light':
+            style = ttk.Style()
+            style.theme_use('clam')
+            style.configure('.', background='#f0f0f0')
+            style.configure('TFrame', background='#f0f0f0')
+            style.configure('TLabel', background='#f0f0f0')
+            style.configure('TLabelframe', background='#f0f0f0')
+            style.configure('TLabelframe.Label', background='#f0f0f0')
+        elif theme_name == 'dark':
+            style = ttk.Style()
+            style.theme_use('clam')
+            style.configure('.', background='#2d2d2d', foreground='#ffffff')
+            style.configure('TFrame', background='#2d2d2d')
+            style.configure('TLabel', background='#2d2d2d', foreground='#ffffff')
+            style.configure('TLabelframe', background='#2d2d2d')
+            style.configure('TLabelframe.Label', background='#2d2d2d', foreground='#ffffff')
+            style.configure('TButton', background='#444444', foreground='#ffffff')
+            style.map('TButton', background=[('active', '#555555')])
+            style.configure('TEntry', fieldbackground='#444444', foreground='#ffffff')
+            style.configure('TCombobox', fieldbackground='#444444', foreground='#ffffff')
+            style.configure('Horizontal.TProgressbar', background='#0088cc')
     
     def _browse_dir_for_var(self, var):
         """Browse for a directory and set it to the given variable"""
@@ -540,6 +628,91 @@ class P2IApp:
     
     def show_help(self):
         """Show help information"""
+
+        help_text = """p2i - PDF & Image Processing Tool - User Guide
+
+                    QUICK START
+                    - Use the tabs at the top to select different tools
+                    - For most operations: select input file(s), set options, choose output location, click Process/Convert button
+                    - Drag and drop files directly onto any tab for quicker workflow
+
+                    PDF TOOLS
+
+                    1. Merge PDFs
+                    • Click "Add PDFs" to select multiple PDF files
+                    • Reorder them using Move Up/Down buttons
+                    • Set output location and filename
+                    • Click "Merge PDFs" to combine them into a single document
+
+                    2. Split PDF
+                    • Select a PDF file to split
+                    • Choose split mode:
+                        - Page Range: Extract a specific range of pages
+                        - Single Pages: Extract specific page numbers (e.g., 1,3,5-7)
+                        - Extract Every N Pages: Take every Nth page
+                    • Set output location
+                    • Click "Split PDF" to create new PDF(s)
+
+                    3. Compress PDF
+                    • Select a PDF to compress
+                    • Choose compression level (low, medium, high)
+                    • Select compression method:
+                        - Auto: Analyzes content and chooses best method
+                        - Image-based: Best for documents with many images
+                        - Direct: Best for text-heavy documents
+                    • Click "Compress PDF" to reduce file size
+
+                    4. PDF to Image
+                    • Select a PDF to convert to images
+                    • Set page range, DPI, and image format
+                    • Use "Preview" to see how the output will look
+                    • For multiple PDFs, check "Batch Mode"
+                    • Click "Convert PDF to Images" to process
+
+                    5. Image to PDF
+                    • Click "Add Images" to select images to combine
+                    • Reorder them using Move Up/Down buttons
+                    • Set page size, orientation, and margins
+                    • Click "Create PDF from Images" to convert
+
+                    6. PDF Security
+                    • Select a PDF file
+                    • For password protection:
+                        - Check "Enable Password Protection"
+                        - Set owner and/or user passwords
+                        - Configure permissions (printing, copying, etc.)
+                    • For watermarking:
+                        - Check "Add Watermark"
+                        - Choose text or image watermark
+                        - Set position, opacity, and rotation
+                    • Click "Process PDF" to apply changes
+
+                    IMAGE TOOLS
+
+                    7. Image Processing
+                    • Select input directory containing images
+                    • Choose operation type:
+                        - Resize: Change dimensions using various methods
+                        - Convert: Change image format with quality options
+                        - Adjust: Modify brightness, contrast, filters
+                        - Optimize: Reduce file size for web/sharing
+                    • Preview changes on sample image
+                    • Click "Process Images" to batch process all images
+
+                    8. Office/Markdown to PDF
+                    • Select Office document (Word, Excel, PowerPoint) or Markdown file
+                    • Set conversion options specific to the file type
+                    • Choose output location and filename
+                    • Click "Convert to PDF" to transform document
+
+                    TIPS
+                    - Use the "Preview" feature where available to check results before processing
+                    - For batch operations, check file pattern settings to ensure all files are included
+                    - Right-click lists to access context menus for additional options
+                    - Check the status bar at the bottom for operation progress
+                    - If conversion fails, try different settings or check file permissions
+                    """
+
         # Create a simple help dialog
         dialog = tk.Toplevel(self.root)
         dialog.title("Help")
@@ -558,54 +731,7 @@ class P2IApp:
         scrollbar.config(command=text.yview)
         
         # Insert help content
-        text.insert("1.0", """p2i - Help
-
-This application provides a comprehensive set of tools for PDF and image processing:
-
-1. Merge PDFs
-   - Combine multiple PDF files into a single document
-   - Rearrange the order of PDFs before merging
-   - Preview the total number of pages
-
-2. Split PDF
-   - Extract specific page ranges from a PDF
-   - Extract individual pages
-   - Extract every Nth page
-
-3. Compress PDF
-   - Reduce PDF file size with different compression levels
-   - Choose between different compression methods
-   - View file size reduction information
-
-4. PDF to Image Conversion
-   - Convert PDF pages to images in various formats
-   - Control resolution and quality settings
-   - Batch conversion support
-
-5. Image to PDF Conversion
-   - Create PDFs from multiple images
-   - Adjust page size, orientation, and margins
-   - Rearrange images before conversion
-
-6. PDF Security & Watermark
-   - Add password protection to PDFs
-   - Set document permissions
-   - Add text or image watermarks with customizable settings
-
-7. Image Processing
-   - Resize, convert, adjust, and optimize images
-   - Batch process multiple images
-   - Preview changes before processing
-
-8. Office/Markdown to PDF
-   - Convert Word, Excel, PowerPoint and Markdown documents to PDF
-   - Customize conversion settings
-
-Tips:
-- Drag and drop files directly onto the application
-- Use the Recent Files menu to quickly access previous documents
-- Set your preferences in the Tools > Preferences menu
-""")
+        text.insert("1.0", help_text)
         
         text.config(state="disabled")  # Make text read-only
         

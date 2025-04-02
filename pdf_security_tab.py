@@ -6,6 +6,12 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pypdfium2 as pdfium
 from PyPDF2 import PdfReader, PdfWriter
+try:
+    from PyPDF2.errors import PasswordError
+except ImportError:
+    # For older versions of PyPDF2
+    class PasswordError(Exception):
+        pass
 from PIL import Image, ImageDraw, ImageFont
 import utils
 
@@ -60,7 +66,15 @@ class PDFSecurityTab:
         
         # Process canceled flag
         self.process_canceled = False
-    
+
+    @staticmethod
+    def to_float(value):
+        """Convert any numeric value to float, including Decimal types."""
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
     def create_file_frame(self):
         file_frame = ttk.LabelFrame(self.frame, text="File Selection", padding=10)
         file_frame.pack(fill="x", expand=False, padx=10, pady=5)
@@ -81,20 +95,94 @@ class PDFSecurityTab:
         # Make column 1 expand
         file_frame.columnconfigure(1, weight=1)
     
+    def toggle_encryption(self):
+        if self.use_encryption.get():
+            # Disable password removal option
+            self.remove_password.set(False)
+            if hasattr(self, 'removal_frame'):
+                self.removal_frame.grid_remove()
+                
+            # Disable remove password checkbox
+            for child in self.security_frame.winfo_children():
+                if isinstance(child, ttk.Checkbutton) and child.cget("text") == "Remove Password Protection":
+                    child.configure(state="disabled")
+                    break
+            
+            # Enable password fields
+            for child in self.password_frame.winfo_children():
+                child.configure(state="normal")
+            for child in self.permissions_frame.winfo_children():
+                child.configure(state="normal")
+        else:
+            # Enable remove password checkbox
+            for child in self.security_frame.winfo_children():
+                if isinstance(child, ttk.Checkbutton) and child.cget("text") == "Remove Password Protection":
+                    child.configure(state="normal")
+                    break
+            
+            # Disable password fields
+            for child in self.password_frame.winfo_children():
+                child.configure(state="disabled")
+            for child in self.permissions_frame.winfo_children():
+                child.configure(state="disabled")
+                
+    def toggle_password_removal(self):
+        if self.remove_password.get():
+            # Disable encryption options when removing password
+            self.use_encryption.set(False)
+            self.toggle_encryption()
+            
+            # Disable encryption checkbox
+            for child in self.security_frame.winfo_children():
+                if isinstance(child, ttk.Checkbutton) and child.cget("text") == "Enable Password Protection":
+                    child.configure(state="disabled")
+                    break
+                    
+            # Show password entry field for the input PDF
+            if not hasattr(self, 'removal_frame'):
+                self.removal_frame = ttk.Frame(self.security_frame)
+                self.removal_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
+                
+                ttk.Label(self.removal_frame, text="PDF Password:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+                self.pdf_password = tk.StringVar()
+                self.pdf_password_entry = ttk.Entry(self.removal_frame, textvariable=self.pdf_password, width=20, show="*")
+                self.pdf_password_entry.grid(row=0, column=1, sticky="ew", padx=5, pady=5)
+            else:
+                self.removal_frame.grid()
+        else:
+            # Enable encryption checkbox
+            for child in self.security_frame.winfo_children():
+                if isinstance(child, ttk.Checkbutton) and child.cget("text") == "Enable Password Protection":
+                    child.configure(state="normal")
+                    break
+                    
+            # Hide password entry field
+            if hasattr(self, 'removal_frame'):
+                self.removal_frame.grid_remove()
+                
     def create_security_frame(self):
-        security_frame = ttk.LabelFrame(self.frame, text="Security Settings", padding=10)
-        security_frame.pack(fill="x", expand=False, padx=10, pady=5)
+        self.security_frame = ttk.LabelFrame(self.frame, text="Security Settings", padding=10)
+        self.security_frame.pack(fill="x", expand=False, padx=10, pady=5)
         
-        # Enable encryption checkbox
+        # Add new option to remove password
+        self.remove_password = tk.BooleanVar(value=False)
         ttk.Checkbutton(
-            security_frame, 
+            self.security_frame, 
+            text="Remove Password Protection", 
+            variable=self.remove_password,
+            command=self.toggle_password_removal
+        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+        
+        # Original code for enable encryption checkbox
+        ttk.Checkbutton(
+            self.security_frame, 
             text="Enable Password Protection", 
             variable=self.use_encryption,
             command=self.toggle_encryption
-        ).grid(row=0, column=0, columnspan=2, sticky="w", padx=5, pady=5)
-        
+        ).grid(row=1, column=0, columnspan=2, sticky="w", padx=5, pady=5)
+               
         # Password entry fields
-        self.password_frame = ttk.Frame(security_frame)
+        self.password_frame = ttk.Frame(self.security_frame)
         self.password_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
         
         ttk.Label(self.password_frame, text="Owner Password:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
@@ -106,7 +194,7 @@ class PDFSecurityTab:
         self.user_pw_entry.grid(row=1, column=1, sticky="ew", padx=5, pady=5)
         
         # Permissions frame
-        self.permissions_frame = ttk.LabelFrame(security_frame, text="Permissions", padding=5)
+        self.permissions_frame = ttk.LabelFrame(self.security_frame, text="Permissions", padding=5)
         self.permissions_frame.grid(row=2, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
         
         ttk.Checkbutton(self.permissions_frame, text="Allow Printing", variable=self.allow_printing).grid(
@@ -119,6 +207,149 @@ class PDFSecurityTab:
         # Initially disable password fields
         self.toggle_encryption()
     
+    def _processing_thread(self, output_path):
+        try:
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Processing PDF..."))
+            self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(0))
+            
+            if self.remove_password.get():
+                # Process for removing password
+                self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Removing password protection..."))
+                self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(20))
+                
+                # Try to open with provided password
+                try:
+                    reader = PdfReader(self.pdf_path.get(), password=self.pdf_password.get())
+                    writer = PdfWriter()
+                    
+                    # Copy all pages from input to output
+                    total_pages = len(reader.pages)
+                    
+                    # Process each page
+                    for i in range(total_pages):
+                        if self.process_canceled:
+                            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Processing canceled"))
+                            return
+                        
+                        # Update progress
+                        progress_pct = ((i + 1) / total_pages) * 80 + 20
+                        current_page = i + 1
+                        self.frame.winfo_toplevel().after(0, lambda p=progress_pct: self.progress_var.set(p))
+                        self.frame.winfo_toplevel().after(0, lambda p=current_page, t=total_pages: 
+                            self.status_var.set(f"Processing page {p}/{t}..."))
+                        
+                        # Get the page and add it to the writer without any encryption
+                        page = reader.pages[i]
+                        writer.add_page(page)
+                    
+                    # Save the output file without any encryption
+                    self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Saving unprotected PDF..."))
+                    self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(90))
+                    
+                    with open(output_path, "wb") as output_file:
+                        writer.write(output_file)
+                    
+                    # Complete
+                    self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
+                    self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Password protection removed: {os.path.basename(output_path)}"))
+                    self.frame.winfo_toplevel().after(0, lambda: messagebox.showinfo("Success", 
+                        f"Password protection has been removed.\nSaved to: {output_path}"))
+                    
+                except Exception as e:
+                    error_msg = str(e)
+                    # Check if it's a password-related error
+                    if "password" in error_msg.lower() or "decrypt" in error_msg.lower():
+                        self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", 
+                            "Failed to remove password protection: Incorrect password."))
+                    else:
+                        self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", 
+                            f"Failed to process PDF: {error_msg}"))
+                    return
+                    
+            else:
+                # Load the PDF
+                reader = PdfReader(self.pdf_path.get())
+                writer = PdfWriter()
+                
+                # Copy all pages from input to output
+                total_pages = len(reader.pages)
+                
+                # Process each page
+                for i in range(total_pages):
+                    if self.process_canceled:
+                        self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Processing canceled"))
+                        return
+                    
+                    # Update progress - we allocate 80% of progress to page processing
+                    progress_pct = ((i + 1) / total_pages) * 80
+                    current_page = i + 1
+                    self.frame.winfo_toplevel().after(0, lambda p=progress_pct: self.progress_var.set(p))
+                    self.frame.winfo_toplevel().after(0, lambda p=current_page, t=total_pages: 
+                        self.status_var.set(f"Processing page {p}/{t}..."))
+                    
+                    # Get the page
+                    page = reader.pages[i]
+                    
+                    # Add watermark if enabled
+                    if self.add_watermark.get():
+                        page = self._add_watermark_to_page(page, i)
+                    
+                    # Add page to writer
+                    writer.add_page(page)
+                
+                # Apply security if enabled - this is the last 20% of progress
+                if self.use_encryption.get():
+                    self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Applying security settings..."))
+                    self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(80))
+                    
+                    # Set up encryption parameters
+                    writer.encrypt(
+                        user_password=self.user_password.get() if self.user_password.get() else None,
+                        owner_password=self.owner_password.get() if self.owner_password.get() else None,
+                        use_128bit=True
+                    )
+                    
+                    # Set permissions
+                    if not self.allow_printing.get():
+                        writer.add_metadata({"/CanPrint": False})
+                    if not self.allow_copying.get():
+                        writer.add_metadata({"/CanCopy": False})
+                    if not self.allow_modification.get():
+                        writer.add_metadata({"/CanModify": False})
+                
+                # Save the output file
+                self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Saving output file..."))
+                self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(90))
+                
+                with open(output_path, "wb") as output_file:
+                    writer.write(output_file)
+                
+                # Complete
+                self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
+                self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Processing complete: {os.path.basename(output_path)}"))
+                
+                success_message = "PDF processed successfully.\n"
+                if self.use_encryption.get():
+                    success_message += "Security settings applied.\n"
+                if self.add_watermark.get():
+                    success_message += "Watermark added.\n"
+                success_message += f"Saved to: {output_path}"
+                
+                self.frame.winfo_toplevel().after(0, lambda: messagebox.showinfo("Success", success_message))
+                
+        except Exception as e:
+            self.frame.winfo_toplevel().after(0, lambda: messagebox.showerror("Error", f"Failed to process PDF: {str(e)}"))
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Error: {str(e)}"))
+            # Delete partial output
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except:
+                    pass
+        finally:
+            # Re-enable controls
+            self.frame.winfo_toplevel().after(0, lambda: utils.set_controls_state(self.frame, tk.NORMAL))
+            
     def create_watermark_frame(self):
         watermark_frame = ttk.LabelFrame(self.frame, text="Watermark Settings", padding=10)
         watermark_frame.pack(fill="x", expand=False, padx=10, pady=5)
@@ -385,8 +616,8 @@ class PDFSecurityTab:
     def _add_watermark_to_page(self, page, page_index):
         """Add watermark to a PDF page"""
         # Get page dimensions
-        page_width = page.mediabox.width
-        page_height = page.mediabox.height
+        page_width = PDFSecurityTab.to_float(page.mediabox.width)
+        page_height = PDFSecurityTab.to_float(page.mediabox.height)
         
         # Create watermark based on type
         if self.watermark_type.get() == "text":
@@ -402,6 +633,11 @@ class PDFSecurityTab:
     
     def _create_text_watermark(self, width, height):
         """Create a text watermark PDF page"""
+        # Convert to float to avoid decimal.Decimal issues
+        width = PDFSecurityTab.to_float(width)
+        height = PDFSecurityTab.to_float(height)
+    
+        # Rest of the method remains the same...
         # Create a blank PDF page
         from reportlab.pdfgen import canvas
         from reportlab.lib.pagesizes import letter
@@ -448,6 +684,11 @@ class PDFSecurityTab:
     
     def _create_image_watermark(self, width, height):
         """Create an image watermark PDF page"""
+        # Convert to float to avoid decimal.Decimal issues
+        width = PDFSecurityTab.to_float(width)
+        height = PDFSecurityTab.to_float(height)
+    
+    # Rest of the method remains the same...
         # Load and resize watermark image
         from reportlab.pdfgen import canvas
         from reportlab.lib.units import inch
