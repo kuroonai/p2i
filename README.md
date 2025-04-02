@@ -90,6 +90,36 @@ conda install -c conda-forge pillow pypdf2 reportlab tk
 pip install pdf2image pypdfium2 tqdm
 ```
 
+#### Using Mamba (Faster alternative to Conda)
+
+Mamba is a reimplementation of Conda that offers significantly faster dependency resolution and installation. It's particularly helpful when you encounter dependency conflicts using Conda+pip combinations.
+
+```bash
+# Install Mamba if you don't have it (only needed once)
+conda install -c conda-forge mamba
+
+# Create a new environment with Mamba
+mamba create -n p2i python=3.9
+
+# Activate the environment
+conda activate p2i
+
+# Install packages using Mamba (much faster than Conda)
+mamba install -c conda-forge pillow pypdf2 reportlab tk
+
+# Some packages might need pip - install them after the Mamba packages
+pip install pdf2image pypdfium2 tqdm
+
+# If you encounter conflicts, you can use this approach:
+# 1. Install ALL dependencies with Mamba first
+mamba install -c conda-forge pillow pypdf2 reportlab tk pip
+
+# 2. Use the pip from within the environment to install remaining packages
+$CONDA_PREFIX/bin/pip install pdf2image pypdfium2 tqdm
+# Or on Windows:
+%CONDA_PREFIX%\Scripts\pip install pdf2image pypdfium2 tqdm
+```
+
 ### Step 4: Install Python Requirements
 
 ```bash
