@@ -29,7 +29,7 @@ class P2IApp:
         self.root.geometry("900x700")
         self.set_app_icon()
 
-        icon_path = os.path.join("resources", "icons", "app_icon.ico")
+        icon_path = os.path.join("resources", "icon", "app_icon.ico")
         if os.path.exists(icon_path):
             try:
                 self.root.iconbitmap(icon_path)
