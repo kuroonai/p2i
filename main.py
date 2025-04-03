@@ -80,40 +80,40 @@ class P2IApp:
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
     
     def set_app_icon(self):
-    # Try to set the icon based on the platform
-    if os.name == 'nt':  # Windows
-        icon_path = os.path.join("resources", "icon", "app_icon.ico")
-        if os.path.exists(icon_path):
-            try:
-                self.root.iconbitmap(icon_path)
-            except Exception as e:
-                print(f"Could not load Windows icon: {e}")
-                # Try to use ico file from root as fallback
-                if os.path.exists("p2i.ico"):
-                    try:
-                        self.root.iconbitmap("p2i.ico")
-                    except Exception as e:
-                        print(f"Could not load fallback icon: {e}")
-    else:  # Linux/Mac
-        # For Linux we need to use PhotoImage instead of iconbitmap
-        try:
-            # Try PNG first (commonly used in Linux)
-            icon_path = os.path.join("resources", "icon", "app_icon.png")
-            if not os.path.exists(icon_path):
-                # If PNG doesn't exist, try to find other formats
-                for ext in ['.png']#, '.gif', '.ppm', '.xbm']:
-                    alt_path = os.path.join("resources", "icon", f"app_icon{ext}")
-                    if os.path.exists(alt_path):
-                        icon_path = alt_path
-                        break
-            
+        # Try to set the icon based on the platform
+        if os.name == 'nt':  # Windows
+            icon_path = os.path.join("resources", "icon", "app_icon.ico")
             if os.path.exists(icon_path):
-                icon_img = tk.PhotoImage(file=icon_path)
-                self.root.iconphoto(True, icon_img)
-            else:
-                print("No suitable icon found for this platform")
-        except Exception as e:
-            print(f"Could not load icon for Linux/Mac: {e}")
+                try:
+                    self.root.iconbitmap(icon_path)
+                except Exception as e:
+                    print(f"Could not load Windows icon: {e}")
+                    # Try to use ico file from root as fallback
+                    if os.path.exists("p2i.ico"):
+                        try:
+                            self.root.iconbitmap("p2i.ico")
+                        except Exception as e:
+                            print(f"Could not load fallback icon: {e}")
+        else:  # Linux/Mac
+            # For Linux we need to use PhotoImage instead of iconbitmap
+            try:
+                # Try PNG first (commonly used in Linux)
+                icon_path = os.path.join("resources", "icon", "app_icon.png")
+                if not os.path.exists(icon_path):
+                    # If PNG doesn't exist, try to find other formats
+                    for ext in ['.png']:#, '.gif', '.ppm', '.xbm']:
+                        alt_path = os.path.join("resources", "icon", f"app_icon{ext}")
+                        if os.path.exists(alt_path):
+                            icon_path = alt_path
+                            break
+                
+                if os.path.exists(icon_path):
+                    icon_img = tk.PhotoImage(file=icon_path)
+                    self.root.iconphoto(True, icon_img)
+                else:
+                    print("No suitable icon found for this platform")
+            except Exception as e:
+                print(f"Could not load icon for Linux/Mac: {e}")
                 
     def setup_drag_drop(self):
         """Set up drag and drop functionality"""
@@ -578,26 +578,26 @@ class P2IApp:
         ttk.Button(btn_frame, text="Cancel", 
                  command=dialog.destroy).pack(side="right", padx=5)
         
-    def save_preferences(self):
-        # Update settings
-        self.settings.settings['theme'] = theme_var.get()
-        self.settings.settings['max_recent_files'] = max_recent_var.get()
-        self.settings.settings['confirm_overwrite'] = confirm_overwrite_var.get()
-        self.settings.settings['remember_last_directory'] = remember_dir_var.get()
-        self.settings.settings['default_output_dir'] = pdf_dir_var.get()
-        self.settings.settings['default_image_output_dir'] = img_dir_var.get()
-        
-        # Save settings
-        self.settings.save_settings()
-        
-        # Apply settings to current application state
-        self.apply_settings()
-        
-        # Update UI if needed
-        self.update_recent_files_menu()
-        
-        dialog.destroy()
-        messagebox.showinfo("Success", "Preferences saved successfully.")
+        def save_preferences(self):
+            # Update settings
+            self.settings.settings['theme'] = theme_var.get()
+            self.settings.settings['max_recent_files'] = max_recent_var.get()
+            self.settings.settings['confirm_overwrite'] = confirm_overwrite_var.get()
+            self.settings.settings['remember_last_directory'] = remember_dir_var.get()
+            self.settings.settings['default_output_dir'] = pdf_dir_var.get()
+            self.settings.settings['default_image_output_dir'] = img_dir_var.get()
+            
+            # Save settings
+            self.settings.save_settings()
+            
+            # Apply settings to current application state
+            self.apply_settings()
+            
+            # Update UI if needed
+            self.update_recent_files_menu()
+            
+            dialog.destroy()
+            messagebox.showinfo("Success", "Preferences saved successfully.")
 
     def apply_settings(self):
         """Apply current settings to the application"""
