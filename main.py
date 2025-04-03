@@ -848,7 +848,10 @@ This application provides a user-friendly interface for:
         # Destroy the root window
         self.root.destroy()
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = P2IApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
