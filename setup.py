@@ -14,10 +14,10 @@ setup(
     long_description_content_type="text/markdown",
     author="Naveen Vasudevan",
     author_email="naveenovan@gmail.com",
-    url="https://github.com/yourusername/p2i",  # Replace with your actual repository URL
+    url="https://github.com/kuroonai/p2i",  # Replace with your actual repository URL
     packages=find_packages(),
     include_package_data=True,
-    python_requires='>=3.6',  # Specify minimum Python version
+    python_requires='>=3.9',  # Specify minimum Python version
     install_requires=[
         "pdf2image>=1.16.3",
         "Pillow>=9.0.0",
@@ -34,9 +34,6 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: End Users/Desktop",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "License :: OSI Approved :: MIT License",  
         "Operating System :: OS Independent",
