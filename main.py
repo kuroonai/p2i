@@ -852,6 +852,6 @@ def main():
     root = tk.Tk()
     app = P2IApp(root)
     root.mainloop()
-
+    
 if __name__ == "__main__":
     main()
