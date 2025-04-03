@@ -16,7 +16,7 @@ from pdf_to_image_tab import PDFToImageTab
 from image_to_pdf_tab import ImageToPDFTab
 from pdf_security_tab import PDFSecurityTab
 from image_batch_tab import ImageBatchTab
-from office_convert_tab import OfficeConvertTab
+#from office_convert_tab import OfficeConvertTab
 
 # Import settings and drag drop
 from settings import Settings
@@ -27,6 +27,15 @@ class P2IApp:
         self.root = root
         self.root.title("p2i - PDF & Image Processing Tool")
         self.root.geometry("900x700")
+
+        icon_path = os.path.join("resources", "icons", "app_icon.ico")
+        if os.path.exists(icon_path):
+            try:
+                self.root.iconbitmap(icon_path)
+            except Exception as e:
+                print(f"Could not load icon: {e}")
+        else:
+            print(f"Icon not found at: {icon_path}")
         
         # Load settings
         self.settings = Settings()
@@ -46,7 +55,7 @@ class P2IApp:
         self.image_to_pdf_tab = ImageToPDFTab(self.notebook)
         self.pdf_security_tab = PDFSecurityTab(self.notebook)
         self.image_batch_tab = ImageBatchTab(self.notebook)
-        self.office_convert_tab = OfficeConvertTab(self.notebook)
+        #self.office_convert_tab = OfficeConvertTab(self.notebook)
         
         # Add tabs to notebook
         self.notebook.add(self.pdf_merge_tab.frame, text="Merge PDFs")
@@ -56,7 +65,7 @@ class P2IApp:
         self.notebook.add(self.image_to_pdf_tab.frame, text="Image to PDF")
         self.notebook.add(self.pdf_security_tab.frame, text="PDF Security")
         self.notebook.add(self.image_batch_tab.frame, text="Image Processing")
-        self.notebook.add(self.office_convert_tab.frame, text="Office/Markdown to PDF")
+        #self.notebook.add(self.office_convert_tab.frame, text="Office/Markdown to PDF")
         
         # Create main menu
         self.create_menu()
@@ -80,7 +89,7 @@ class P2IApp:
             self.image_to_pdf_tab.frame,
             self.pdf_security_tab.frame,
             self.image_batch_tab.frame,
-            self.office_convert_tab.frame
+            #self.office_convert_tab.frame
         ]
         
         # Initialize drag-drop manager
@@ -105,7 +114,7 @@ class P2IApp:
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Open PDF...", command=self.open_pdf)
         file_menu.add_command(label="Open Image...", command=self.open_image)
-        file_menu.add_command(label="Open Office Document...", command=self.open_office_doc)
+        # file_menu.add_command(label="Open Office Document...", command=self.open_office_doc)
         
         # Recent files submenu
         self.recent_menu = tk.Menu(file_menu, tearoff=0)
@@ -143,7 +152,7 @@ class P2IApp:
             self.image_to_pdf_tab.frame,
             self.pdf_security_tab.frame,
             self.image_batch_tab.frame,
-            self.office_convert_tab.frame
+            #self.office_convert_tab.frame
         ]
         
         # Initialize drag-drop manager
@@ -232,7 +241,7 @@ class P2IApp:
                 self.notebook.select(6)  # Image Processing tab
                 self.image_batch_tab.selected_image_path.set(file_path)
                 self.image_batch_tab.show_preview_image(file_path)
-    
+    '''
     def open_office_doc(self):
         """Open an office document and switch to appropriate tab"""
         file_path = askopenfilename(
@@ -273,7 +282,7 @@ class P2IApp:
             # Set default output name
             input_basename = os.path.splitext(os.path.basename(file_path))[0]
             self.office_convert_tab.output_name.set(f"{input_basename}.pdf")
-    
+    '''
     def open_recent_file(self, file_path):
         """Open a file from the recent files list"""
         if not os.path.exists(file_path):
@@ -293,9 +302,9 @@ class P2IApp:
         elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"]:
             # For images
             self.open_image()
-        elif ext in [".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt", ".md", ".txt"]:
-            # For office documents
-            self.open_office_doc()
+        # elif ext in [".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt", ".md", ".txt"]:
+        #     # For office documents
+        #     self.open_office_doc()
         else:
             # For unknown types
             messagebox.showinfo("Info", f"Unknown file type: {ext}")
@@ -434,29 +443,29 @@ class P2IApp:
                 # If multiple images, set the images directory to the parent folder of the first image
                 parent_dir = os.path.dirname(image_files[0])
                 self.image_batch_tab.images_dir.set(parent_dir)
-        elif current_tab_idx == 7 and (office_files or pdf_files):  # Office/Markdown to PDF tab
-            file_to_use = office_files[0] if office_files else pdf_files[0]
-            self.office_convert_tab.input_path.set(file_to_use)
+        # elif current_tab_idx == 7 and (office_files or pdf_files):  # Office/Markdown to PDF tab
+        #     file_to_use = office_files[0] if office_files else pdf_files[0]
+        #     self.office_convert_tab.input_path.set(file_to_use)
             
-            # Set file type based on extension
-            ext = os.path.splitext(file_to_use)[1].lower()
-            if ext in [".docx", ".doc"]:
-                self.office_convert_tab.file_type.set("word")
-            elif ext in [".xlsx", ".xls"]:
-                self.office_convert_tab.file_type.set("excel")
-            elif ext in [".pptx", ".ppt"]:
-                self.office_convert_tab.file_type.set("powerpoint")
-            elif ext in [".md", ".txt"]:
-                self.office_convert_tab.file_type.set("markdown")
-            else:
-                self.office_convert_tab.file_type.set("auto")
+        #     # Set file type based on extension
+        #     ext = os.path.splitext(file_to_use)[1].lower()
+        #     if ext in [".docx", ".doc"]:
+        #         self.office_convert_tab.file_type.set("word")
+        #     elif ext in [".xlsx", ".xls"]:
+        #         self.office_convert_tab.file_type.set("excel")
+        #     elif ext in [".pptx", ".ppt"]:
+        #         self.office_convert_tab.file_type.set("powerpoint")
+        #     elif ext in [".md", ".txt"]:
+        #         self.office_convert_tab.file_type.set("markdown")
+        #     else:
+        #         self.office_convert_tab.file_type.set("auto")
             
-            # Update visible options
-            self.office_convert_tab.on_file_type_change(None)
+        #     # Update visible options
+        #     self.office_convert_tab.on_file_type_change(None)
             
-            # Set default output name
-            input_basename = os.path.splitext(os.path.basename(file_to_use))[0]
-            self.office_convert_tab.output_name.set(f"{input_basename}.pdf")
+        #     # Set default output name
+        #     input_basename = os.path.splitext(os.path.basename(file_to_use))[0]
+        #     self.office_convert_tab.output_name.set(f"{input_basename}.pdf")
     
     def clear_recent_files(self):
         """Clear the list of recent files"""
@@ -574,7 +583,7 @@ class P2IApp:
                 self.pdf_split_tab,
                 self.pdf_compress_tab,
                 self.pdf_security_tab,
-                self.office_convert_tab
+                #self.office_convert_tab
             ]
             for tab in tabs_with_pdf_output:
                 if hasattr(tab, 'output_dir') and not tab.output_dir.get():

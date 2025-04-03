@@ -8,7 +8,6 @@ p2i (PDF & Image) is a comprehensive GUI application for PDF and image operation
 - PDF compression (with multiple methods)
 - PDF security & watermarking
 - Image batch processing
-- Office document & Markdown to PDF conversion
 
 ## Prerequisites
 
@@ -38,28 +37,7 @@ sudo apt-get install -y poppler-utils
 sudo apt-get install -y ghostscript  # For enhanced PDF compression
 ```
 
-### Step 2: Install Optional Dependencies
-
-For Office document and Markdown conversion:
-```bash
-# Install LibreOffice (for Office documents)
-# On Windows: Download and install from libreoffice.org
-# On macOS:
-brew install libreoffice
-
-# On Linux:
-sudo apt-get install -y libreoffice
-
-# Install Pandoc (for Markdown)
-# On Windows: Download and install from pandoc.org
-# On macOS:
-brew install pandoc
-
-# On Linux:
-sudo apt-get install -y pandoc
-```
-
-### Step 3: Create a Virtual Environment (Optional but Recommended)
+### Step 2: Create a Virtual Environment (Optional but Recommended)
 
 #### Using venv
 
@@ -90,37 +68,7 @@ conda install -c conda-forge pillow pypdf2 reportlab tk
 pip install pdf2image pypdfium2 tqdm
 ```
 
-#### Using Mamba (Faster alternative to Conda)
-
-Mamba is a reimplementation of Conda that offers significantly faster dependency resolution and installation. It's particularly helpful when you encounter dependency conflicts using Conda+pip combinations.
-
-```bash
-# Install Mamba if you don't have it (only needed once)
-conda install -c conda-forge mamba
-
-# Create a new environment with Mamba
-mamba create -n p2i python=3.9
-
-# Activate the environment
-conda activate p2i
-
-# Install packages using Mamba (much faster than Conda)
-mamba install -c conda-forge pillow pypdf2 reportlab tk
-
-# Some packages might need pip - install them after the Mamba packages
-pip install pdf2image pypdfium2 tqdm
-
-# If you encounter conflicts, you can use this approach:
-# 1. Install ALL dependencies with Mamba first
-mamba install -c conda-forge pillow pypdf2 reportlab tk pip
-
-# 2. Use the pip from within the environment to install remaining packages
-$CONDA_PREFIX/bin/pip install pdf2image pypdfium2 tqdm
-# Or on Windows:
-%CONDA_PREFIX%\Scripts\pip install pdf2image pypdfium2 tqdm
-```
-
-### Step 4: Install Python Requirements
+### Step 3: Install Python Requirements
 
 ```bash
 pip install -r requirements.txt
@@ -149,30 +97,7 @@ python main.py &
 ```
 Make it executable: `chmod +x launch.sh`
 
-## Additional Requirements
-
-### Optional Dependencies
-
-#### Drag and Drop Support (TkinterDnD)
-
-To enable drag and drop functionality, you need to install the TkinterDnD2 library:
-
-**Windows:**
-```bash
-pip install tkinterdnd2
-```
-
-**macOS/Linux:**
-```bash
-# For Python 3.x
-pip install tkinterdnd2
-
-# If you're using a specific conda/mamba environment:
-conda activate p2i
-pip install tkinterdnd2
-```
-
-If you see the error "TkinterDnD not available. Drag and drop disabled", it means this library isn't installed or properly configured. The application will still work, but without drag and drop capabilities.
+## Features
 
 ### PDF to Image Conversion
 - Convert entire PDFs or specific page ranges to images
@@ -210,6 +135,7 @@ If you see the error "TkinterDnD not available. Drag and drop disabled", it mean
 - Password protection with owner/user passwords
 - Permission controls (printing, copying, modification)
 - Text and image watermarks with customizable position, opacity, and rotation
+- Password removal functionality
 
 ### Image Batch Processing
 - Resize images with various options (percentage, dimensions, maximum dimension)
@@ -217,18 +143,6 @@ If you see the error "TkinterDnD not available. Drag and drop disabled", it mean
 - Adjust brightness, contrast, and sharpness
 - Apply image filters
 - Optimize images for web/storage
-
-### Office Document & Markdown Conversion
-- Convert Word documents to PDF
-- Convert Excel spreadsheets to PDF
-- Convert PowerPoint presentations to PDF
-- Convert Markdown to PDF with styling options
-
-## User Interface Improvements
-- Drag and drop file support
-- Recent files history
-- Customizable preferences
-- File operation dialogs
 
 ## Troubleshooting
 
@@ -252,9 +166,9 @@ If you see the error "TkinterDnD not available. Drag and drop disabled", it mean
    - Try different compression methods for different types of PDFs
    - Some PDFs may already be highly optimized and won't compress further
 
-5. **Office Document Conversion Issues**
-   - Ensure LibreOffice is installed and accessible from the command line
-   - Check that the document isn't corrupt or password-protected
+5. **Security Tab Issues**
+   - If experiencing issues with password protection, ensure you've entered at least one password
+   - Some PDFs may have restrictions that prevent modifications
 
 ### Error Messages
 
