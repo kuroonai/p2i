@@ -27,16 +27,41 @@ class P2IApp:
         self.root = root
         self.root.title("p2i - PDF & Image Processing Tool")
         self.root.geometry("900x700")
-        self.set_app_icon()
 
-        icon_path = os.path.join("resources", "icon", "app_icon.ico")
-        if os.path.exists(icon_path):
+        # Handle resource paths differently when running as script vs executable
+        if getattr(sys, 'frozen', False):
+            # Running as executable
+            application_path = sys._MEIPASS
+        else:
+            # Running as script
+            application_path = os.path.dirname(os.path.abspath(__file__))
+        
+        # Platform-specific icon handling
+        if os.name == 'nt':  # Windows
+            # Try both locations for the icon
+            icon_path = os.path.join(application_path, "resources", "icon", "app_icon.ico")
+            if not os.path.exists(icon_path):
+                # Try the root ico file as fallback
+                icon_path = os.path.join(application_path, "p2i.ico")
+            
+            if os.path.exists(icon_path):
+                try:
+                    self.root.iconbitmap(icon_path)
+                except Exception as e:
+                    print(f"Could not load icon: {e}")
+            else:
+                print(f"Icon not found at: {icon_path}")
+        else:  # Linux/Mac
             try:
-                self.root.iconbitmap(icon_path)
+                # For Linux/Mac, try PNG format
+                icon_path = os.path.join(application_path, "resources", "icon", "app_icon.png")
+                if os.path.exists(icon_path):
+                    img = tk.PhotoImage(file=icon_path)
+                    self.root.iconphoto(True, img)
+                else:
+                    print(f"Icon not found at: {icon_path}")
             except Exception as e:
                 print(f"Could not load icon: {e}")
-        else:
-            print(f"Icon not found at: {icon_path}")
         
         # Load settings
         self.settings = Settings()
