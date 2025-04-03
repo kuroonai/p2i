@@ -35,6 +35,7 @@ brew install ghostscript  # For enhanced PDF compression
 sudo apt-get update
 sudo apt-get install -y poppler-utils
 sudo apt-get install -y ghostscript  # For enhanced PDF compression
+sudo apt-get install python3-tk
 ```
 
 ### Step 2: Create a Virtual Environment (Optional but Recommended)
