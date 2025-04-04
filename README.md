@@ -179,6 +179,51 @@ If you encounter error messages, they will appear in dialog boxes with details a
 - Memory limitations with very large files
 - Missing dependencies
 
+## Installation
+
+### Linux
+
+#### Option 1: AppImage (Recommended)
+1. Download the AppImage from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
+2. Make it executable: `chmod +x p2i-1.0.0-x86_64.AppImage`
+3. Run it: `./p2i-1.0.0-x86_64.AppImage`
+
+#### Option 2: System Installation
+1. Download the release package from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
+2. Extract it: `tar -xzvf p2i-1.0.0-linux.tar.gz`
+3. Navigate to the extracted directory: `cd p2i-1.0.0-release/linux`
+4. Run the installer: `sudo ./install.sh`
+
+#### Verifying GPG Signature (Optional)
+1. Download both the AppImage and its signature (.asc file)
+2. Import the GPG key: `gpg --keyserver keyserver.ubuntu.com --recv-keys ABCD1234EFGH5678`
+3. Verify the signature: `gpg --verify p2i-1.0.0-x86_64.AppImage.asc p2i-1.0.0-x86_64.AppImage`
+
+### Windows
+
+#### Option 1: Standalone Executable
+1. Download the Windows package from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
+2. Extract the ZIP file: `p2i-1.0.0-windows.zip`
+3. Run the executable: `p2i.exe`
+
+#### Option 2: Create Desktop Shortcut
+1. Right-click on `p2i.exe` and select "Create shortcut"
+2. Move the shortcut to your desktop or start menu
+3. (Optional) Right-click the shortcut, select "Properties" and customize the icon
+
+### Combined Package
+If you need both Windows and Linux versions, download the combined package `p2i-1.0.0-release.tar.gz` which contains executables for both platforms.
+
+## Dependencies
+
+### Linux
+- Python 3.7 or later (included in AppImage)
+- Tkinter (included in AppImage)
+- Ghostscript (for PDF compression, included in AppImage)
+
+### Windows
+- All dependencies are bundled in the executable
+
 ## License
 
 This software is distributed under the MIT License. See the LICENSE file for more information.
