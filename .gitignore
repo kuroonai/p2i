@@ -27,6 +27,12 @@ share/python-wheels/
 *.egg
 MANIFEST
 .test/
+AppDir/
+*.spec
+*.yml
+*.desktop
+appimage-build/
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
