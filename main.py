@@ -16,6 +16,7 @@ from pdf_to_image_tab import PDFToImageTab
 from image_to_pdf_tab import ImageToPDFTab
 from pdf_security_tab import PDFSecurityTab
 from image_batch_tab import ImageBatchTab
+from pdf_organizer_tab import PDFOrganizerTab
 #from office_convert_tab import OfficeConvertTab
 
 # Import settings and drag drop
@@ -81,6 +82,7 @@ class P2IApp:
         self.image_to_pdf_tab = ImageToPDFTab(self.notebook)
         self.pdf_security_tab = PDFSecurityTab(self.notebook)
         self.image_batch_tab = ImageBatchTab(self.notebook)
+        self.pdf_organizer_tab = PDFOrganizerTab(self.notebook)
         #self.office_convert_tab = OfficeConvertTab(self.notebook)
         
         # Add tabs to notebook
@@ -91,6 +93,7 @@ class P2IApp:
         self.notebook.add(self.image_to_pdf_tab.frame, text="Image to PDF")
         self.notebook.add(self.pdf_security_tab.frame, text="PDF Security")
         self.notebook.add(self.image_batch_tab.frame, text="Image Processing")
+        self.notebook.add(self.pdf_organizer_tab.frame, text="PDF Organizer")
         #self.notebook.add(self.office_convert_tab.frame, text="Office/Markdown to PDF")
         
         # Create main menu
@@ -146,10 +149,11 @@ class P2IApp:
         drop_targets = [
             self.pdf_merge_tab.frame,
             self.pdf_split_tab.frame,
+            self.pdf_organizer_tab.frame,
             self.pdf_compress_tab.frame,
+            self.pdf_security_tab.frame,
             self.pdf_to_image_tab.frame,
             self.image_to_pdf_tab.frame,
-            self.pdf_security_tab.frame,
             self.image_batch_tab.frame,
             #self.office_convert_tab.frame
         ]
