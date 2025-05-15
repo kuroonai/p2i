@@ -18,6 +18,7 @@ from pdf_security_tab import PDFSecurityTab
 from image_batch_tab import ImageBatchTab
 from pdf_organizer_tab import PDFOrganizerTab
 from contribute_dialog import show_contribute_dialog
+from support_tab import SupportTab
 #from office_convert_tab import OfficeConvertTab
 
 # Import settings and drag drop
@@ -84,6 +85,7 @@ class P2IApp:
         self.pdf_security_tab = PDFSecurityTab(self.notebook)
         self.image_batch_tab = ImageBatchTab(self.notebook)
         self.pdf_organizer_tab = PDFOrganizerTab(self.notebook)
+        self.support_tab = SupportTab(self.notebook)
         #self.office_convert_tab = OfficeConvertTab(self.notebook)
         
         # Add tabs to notebook
@@ -95,6 +97,7 @@ class P2IApp:
         self.notebook.add(self.pdf_security_tab.frame, text="PDF Security")
         self.notebook.add(self.image_batch_tab.frame, text="Image Processing")
         self.notebook.add(self.pdf_organizer_tab.frame, text="PDF Organizer")
+        self.notebook.add(self.support_tab.frame, text="Support p2i")
         #self.notebook.add(self.office_convert_tab.frame, text="Office/Markdown to PDF")
         
         # Create main menu
@@ -156,6 +159,7 @@ class P2IApp:
             self.pdf_to_image_tab.frame,
             self.image_to_pdf_tab.frame,
             self.image_batch_tab.frame,
+            self.support_tab.frame
             #self.office_convert_tab.frame
         ]
         
