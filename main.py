@@ -17,6 +17,7 @@ from image_to_pdf_tab import ImageToPDFTab
 from pdf_security_tab import PDFSecurityTab
 from image_batch_tab import ImageBatchTab
 from pdf_organizer_tab import PDFOrganizerTab
+from contribute_dialog import show_contribute_dialog
 #from office_convert_tab import OfficeConvertTab
 
 # Import settings and drag drop
@@ -197,10 +198,11 @@ class P2IApp:
         tools_menu.add_command(label="Preferences...", command=self.show_preferences)
         menubar.add_cascade(label="Tools", menu=tools_menu)
         
-        # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         help_menu.add_command(label="Help", command=self.show_help)
         help_menu.add_command(label="Check for Updates", command=self.check_updates)
+        help_menu.add_separator()
+        help_menu.add_command(label="Contribute to p2i", command=lambda: show_contribute_dialog(self.root))
         help_menu.add_separator()
         help_menu.add_command(label="About", command=self.show_about)
         menubar.add_cascade(label="Help", menu=help_menu)

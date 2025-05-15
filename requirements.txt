@@ -11,7 +11,7 @@ Pillow>=9.0.0
 tkinterdnd2>=0.3.0
 
 # Utilities
-tqdm>=4.64.1
+tqdm
 
 # Note: tkinter is part of the standard Python library and cannot be installed via pip
 # If tkinter is missing, you need to install it via your system package manager:
