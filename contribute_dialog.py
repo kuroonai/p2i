@@ -31,7 +31,7 @@ class ContributeDialog:
             pass  # Ignore icon errors
         
         # Initialize variables
-        self.github_url = "https://github.com/yourusername/p2i"
+        self.github_url = "https://github.com/kuroonai/p2i"
         self.issues_url = f"{self.github_url}/issues"
         self.wiki_url = f"{self.github_url}/wiki"
         self.fork_url = f"{self.github_url}/fork"
@@ -188,7 +188,7 @@ class ContributeDialog:
         setup_text = (
             "To set up a development environment for p2i:\n\n"
             "1. Clone the repository:\n"
-            "   git clone https://github.com/yourusername/p2i.git\n\n"
+            "   git clone https://github.com/kuroonai/p2i.git\n\n"
             "2. Create a virtual environment:\n"
             "   python -m venv venv\n\n"
             "3. Activate the virtual environment:\n"
@@ -223,7 +223,7 @@ class ContributeDialog:
         clone_frame = ttk.LabelFrame(tab, text="Clone Repository")
         clone_frame.pack(fill="x", pady=10)
         
-        clone_url = tk.StringVar(value="https://github.com/yourusername/p2i.git")
+        clone_url = tk.StringVar(value="https://github.com/kuroonai/p2i.git")
         url_entry = ttk.Entry(clone_frame, textvariable=clone_url, width=50)
         url_entry.pack(side="left", fill="x", expand=True, padx=5, pady=5)
         
