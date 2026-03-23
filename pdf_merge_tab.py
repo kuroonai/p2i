@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pypdfium2 as pdfium
 import utils
+from styles import COLORS, FONTS
 
 class PDFMergeTab:
     def __init__(self, parent):

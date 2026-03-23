@@ -1,10 +1,15 @@
-# drag_drop.py with improved error handling
+# drag_drop.py with improved error handling and visual feedback
 
 import os
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import platform
-import tkinterdnd2
+
+try:
+    import tkinterdnd2
+except ImportError:
+    tkinterdnd2 = None
+
 
 class DragDropManager:
     def __init__(self, master, settings, target_widgets=None):
@@ -12,6 +17,7 @@ class DragDropManager:
         self.settings = settings
         self.target_widgets = target_widgets or []
         self.tkdnd_available = False
+        self._drag_overlay = None
         self.setup_drag_drop()
     
     # In drag_drop.py

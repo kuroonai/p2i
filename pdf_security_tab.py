@@ -8,6 +8,7 @@ import pypdfium2 as pdfium
 from PyPDF2 import PdfReader, PdfWriter
 from PIL import Image, ImageDraw, ImageFont
 import utils
+from styles import COLORS, FONTS
 
 class PDFSecurityTab:
     def __init__(self, parent):

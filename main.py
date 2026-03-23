@@ -21,9 +21,10 @@ from contribute_dialog import show_contribute_dialog
 from support_tab import SupportTab
 #from office_convert_tab import OfficeConvertTab
 
-# Import settings and drag drop
+# Import settings, drag drop, and styles
 from settings import Settings
 from drag_drop import DragDropManager
+from styles import apply_modern_theme, COLORS, FONTS
 
 class P2IApp:
     def __init__(self, root):
@@ -34,7 +35,7 @@ class P2IApp:
         # Handle resource paths differently when running as script vs executable
         if getattr(sys, 'frozen', False):
             # Running as executable
-            application_path = sys._MEIPASS
+            application_path = sys._MEIPASS  # type: ignore
         else:
             # Running as script
             application_path = os.path.dirname(os.path.abspath(__file__))
@@ -68,10 +69,13 @@ class P2IApp:
         
         # Load settings
         self.settings = Settings()
-        
+
+        # Apply modern theme
+        self.style = apply_modern_theme(root)
+
         # Set up main notebook
         self.notebook = ttk.Notebook(root)
-        self.notebook.pack(fill="both", expand=True, padx=5, pady=5)
+        self.notebook.pack(fill="both", expand=True, padx=8, pady=(8, 4))
         
         # Detect CPU count for parallel processing
         n_cpu = max(1, multiprocessing.cpu_count() - 1)  # Leave one CPU free
@@ -166,17 +170,20 @@ class P2IApp:
         # Initialize drag-drop manager
         self.dnd_manager = DragDropManager(self.root, self.settings, drop_targets)
         
-        # Show a status message about drag and drop availability
-        if not self.dnd_manager.is_available():
-            print("TkinterDnD not available. Drag and drop disabled.")
-            # You could also show this in the UI
-            self.status_bar = ttk.Label(self.root, text="Drag and Drop disabled. Install tkinterdnd2 to enable this feature.")
-            self.status_bar.pack(side="bottom", fill="x", padx=5, pady=2)
-        else:
-            print("Drag and Drop enabled")
-            # Optional: show enabled status
-            self.status_bar = ttk.Label(self.root, text="Drag and Drop enabled")
-            self.status_bar.pack(side="bottom", fill="x", padx=5, pady=2)
+        # Status bar
+        status_frame = tk.Frame(self.root, bg=COLORS['bg_card'], height=28)
+        status_frame.pack(side="bottom", fill="x")
+        status_frame.pack_propagate(False)
+
+        dnd_text = "Drag & Drop enabled" if self.dnd_manager.is_available() else "Drag & Drop unavailable"
+        self.status_bar = tk.Label(status_frame,
+            text=f"  p2i v1.0.0  |  {dnd_text}",
+            font=FONTS['caption'],
+            fg=COLORS['text_muted'],
+            bg=COLORS['bg_card'],
+            anchor='w',
+        )
+        self.status_bar.pack(fill="both", expand=True, padx=8)
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -212,24 +219,7 @@ class P2IApp:
         menubar.add_cascade(label="Help", menu=help_menu)
         
         self.root.config(menu=menubar)
-    
-    def setup_drag_drop(self):
-        """Set up drag and drop functionality"""
-        # Create list of widgets to receive dropped files
-        drop_targets = [
-            self.pdf_merge_tab.frame,
-            self.pdf_split_tab.frame,
-            self.pdf_compress_tab.frame,
-            self.pdf_to_image_tab.frame,
-            self.image_to_pdf_tab.frame,
-            self.pdf_security_tab.frame,
-            self.image_batch_tab.frame,
-            #self.office_convert_tab.frame
-        ]
-        
-        # Initialize drag-drop manager
-        self.dnd_manager = DragDropManager(self.root, self.settings, drop_targets)
-    
+
     def update_recent_files_menu(self):
         """Update the recent files menu items"""
         # Clear existing items
@@ -468,7 +458,29 @@ class P2IApp:
         """Process files that were dropped onto the application"""
         if not files:
             return
-            
+
+        # Validate file types and filter
+        valid_files = []
+        rejected = []
+        for f in files:
+            ext = os.path.splitext(f)[1].lower()
+            if ext in ['.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif',
+                       '.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt', '.md', '.txt']:
+                valid_files.append(f)
+            else:
+                rejected.append(os.path.basename(f))
+
+        if rejected:
+            messagebox.showwarning("Unsupported Files",
+                f"The following files are not supported and were skipped:\n" +
+                "\n".join(rejected[:5]) +
+                (f"\n...and {len(rejected)-5} more" if len(rejected) > 5 else ""))
+
+        if not valid_files:
+            return
+
+        files = valid_files
+
         # Add files to recent list
         for file_path in files:
             self.settings.add_recent_file(file_path)
@@ -515,6 +527,15 @@ class P2IApp:
                 # If multiple images, set the images directory to the parent folder of the first image
                 parent_dir = os.path.dirname(image_files[0])
                 self.image_batch_tab.images_dir.set(parent_dir)
+        elif current_tab_idx == 7 and pdf_files:  # PDF Organizer tab
+            for pdf_path in pdf_files:
+                self.pdf_organizer_tab.source_pdfs.append(pdf_path)
+                self.pdf_organizer_tab.pdf_listbox.insert(tk.END, os.path.basename(pdf_path))
+            self.pdf_organizer_tab.load_pdf_pages(pdf_files)
+            if self.pdf_organizer_tab.selected_index < 0 and self.pdf_organizer_tab.all_pages:
+                self.pdf_organizer_tab.selected_index = 0
+                self.pdf_organizer_tab.update_preview()
+            self.pdf_organizer_tab.refresh_thumbnails()
         # elif current_tab_idx == 7 and (office_files or pdf_files):  # Office/Markdown to PDF tab
         #     file_to_use = office_files[0] if office_files else pdf_files[0]
         #     self.office_convert_tab.input_path.set(file_to_use)
@@ -610,29 +631,23 @@ class P2IApp:
         btn_frame = ttk.Frame(dialog)
         btn_frame.pack(fill="x", padx=10, pady=10)
         
-        ttk.Button(btn_frame, text="Cancel", 
-                 command=dialog.destroy).pack(side="right", padx=5)
-        
-        def save_preferences(self):
-            # Update settings
+        def save_preferences():
             self.settings.settings['theme'] = theme_var.get()
             self.settings.settings['max_recent_files'] = max_recent_var.get()
             self.settings.settings['confirm_overwrite'] = confirm_overwrite_var.get()
             self.settings.settings['remember_last_directory'] = remember_dir_var.get()
             self.settings.settings['default_output_dir'] = pdf_dir_var.get()
             self.settings.settings['default_image_output_dir'] = img_dir_var.get()
-            
-            # Save settings
             self.settings.save_settings()
-            
-            # Apply settings to current application state
             self.apply_settings()
-            
-            # Update UI if needed
             self.update_recent_files_menu()
-            
             dialog.destroy()
             messagebox.showinfo("Success", "Preferences saved successfully.")
+
+        ttk.Button(btn_frame, text="Save",
+                 command=save_preferences).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="Cancel",
+                 command=dialog.destroy).pack(side="right", padx=5)
 
     def apply_settings(self):
         """Apply current settings to the application"""
@@ -672,31 +687,11 @@ class P2IApp:
                     tab.output_dir.set(default_image_dir)
 
     def _apply_theme(self, theme_name):
-        """Apply the selected theme to the application"""
-        if theme_name == 'default':
-            style = ttk.Style()
-            style.theme_use('default')
-        elif theme_name == 'light':
-            style = ttk.Style()
-            style.theme_use('clam')
-            style.configure('.', background='#f0f0f0')
-            style.configure('TFrame', background='#f0f0f0')
-            style.configure('TLabel', background='#f0f0f0')
-            style.configure('TLabelframe', background='#f0f0f0')
-            style.configure('TLabelframe.Label', background='#f0f0f0')
-        elif theme_name == 'dark':
-            style = ttk.Style()
-            style.theme_use('clam')
-            style.configure('.', background='#2d2d2d', foreground='#ffffff')
-            style.configure('TFrame', background='#2d2d2d')
-            style.configure('TLabel', background='#2d2d2d', foreground='#ffffff')
-            style.configure('TLabelframe', background='#2d2d2d')
-            style.configure('TLabelframe.Label', background='#2d2d2d', foreground='#ffffff')
-            style.configure('TButton', background='#444444', foreground='#ffffff')
-            style.map('TButton', background=[('active', '#555555')])
-            style.configure('TEntry', fieldbackground='#444444', foreground='#ffffff')
-            style.configure('TCombobox', fieldbackground='#444444', foreground='#ffffff')
-            style.configure('Horizontal.TProgressbar', background='#0088cc')
+        """Apply the selected theme to the application.
+        The modern theme is always applied as a base; theme_name is kept for future use."""
+        # The modern theme is applied at startup via apply_modern_theme().
+        # This method is kept for settings compatibility.
+        pass
     
     def _browse_dir_for_var(self, var):
         """Browse for a directory and set it to the given variable"""

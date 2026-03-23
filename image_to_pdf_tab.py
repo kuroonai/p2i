@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 import utils
+from styles import COLORS, FONTS
 
 class ImageToPDFTab:
     def __init__(self, parent):

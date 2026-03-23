@@ -6,6 +6,7 @@ from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 from pdf2image import convert_from_path
 import utils
+from styles import COLORS, FONTS
 
 class PDFToImageTab:
     def __init__(self, parent, n_cpu):

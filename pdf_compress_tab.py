@@ -8,6 +8,7 @@ from tkinter import ttk, filedialog, messagebox
 import pypdfium2 as pdfium
 from PIL import Image
 import utils
+from styles import COLORS, FONTS
 
 # Import PyPDF2 for direct PDF manipulation
 try:
@@ -230,45 +231,38 @@ Note: Results may vary depending on the PDF content."""
         try:
             self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Compressing PDF using {method} method..."))
             self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(0))
-            
+
             # Try Ghostscript first for best compression (if method supports it)
             if method in ["auto", "image"]:
                 try:
                     self._gs_compress_pdf(output_path)
-                    # If successful, skip to the end
-                except Exception as e:
-                    # If Ghostscript fails, fall back to other methods
-                    if method == "direct" and HAVE_PYPDF2:
-                        self._direct_compress_pdf(output_path)
-                    else:
-                        self._image_compress_pdf(output_path)
+                except Exception:
+                    self._image_compress_pdf(output_path)
             else:
-                # Use chosen method directly
                 if method == "direct" and HAVE_PYPDF2:
                     self._direct_compress_pdf(output_path)
                 else:
                     self._image_compress_pdf(output_path)
-                
-                # Get and display file size reduction
-                original_size = os.path.getsize(self.pdf_path.get())
-                compressed_size = os.path.getsize(output_path)
-                original_formatted = utils.format_file_size(original_size)
-                compressed_formatted = utils.format_file_size(compressed_size)
-                reduction_percent = ((original_size - compressed_size) / original_size) * 100 if original_size > 0 else 0
-                
-                result_message = (
-                    f"Compression complete!\n"
-                    f"Original size: {original_formatted}\n"
-                    f"Compressed size: {compressed_formatted}\n"
-                    f"Reduction: {reduction_percent:.1f}%\n"
-                    f"Saved to: {output_path}"
-                )
-                
-                # Complete
-                self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
-                self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Compression complete: {os.path.basename(output_path)}"))
-                self.frame.winfo_toplevel().after(0, lambda: messagebox.showinfo("Success", result_message))
-                
+
+            # Get and display file size reduction
+            original_size = os.path.getsize(self.pdf_path.get())
+            compressed_size = os.path.getsize(output_path)
+            original_formatted = utils.format_file_size(original_size)
+            compressed_formatted = utils.format_file_size(compressed_size)
+            reduction_percent = ((original_size - compressed_size) / original_size) * 100 if original_size > 0 else 0
+
+            result_message = (
+                f"Compression complete!\n"
+                f"Original size: {original_formatted}\n"
+                f"Compressed size: {compressed_formatted}\n"
+                f"Reduction: {reduction_percent:.1f}%\n"
+                f"Saved to: {output_path}"
+            )
+
+            self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Compression complete: {os.path.basename(output_path)}"))
+            self.frame.winfo_toplevel().after(0, lambda: messagebox.showinfo("Success", result_message))
+
         except Exception as e:
             error_msg = str(e)
             

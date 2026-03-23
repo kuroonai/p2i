@@ -9,6 +9,7 @@ import pypdfium2 as pdfium
 from PIL import Image, ImageTk
 from PyPDF2 import PdfReader, PdfWriter
 import utils
+from styles import COLORS, FONTS
 
 class PDFOrganizerTab:
     def __init__(self, parent):
@@ -25,7 +26,9 @@ class PDFOrganizerTab:
         self.process_canceled = False
         
         # Page management
-        self.all_pages = []  # List of (pdf_path, page_index, is_blank) tuples
+        # Each entry: (pdf_path, page_index, is_blank)
+        self.all_pages = []
+        self.page_rotations = {}  # Dict mapping page list index to cumulative rotation degrees
         self.selected_index = -1
         self.thumbnail_cache = {}  # Cache for page thumbnails
         self.current_zoom = 1.0  # Zoom level for main preview
@@ -131,8 +134,8 @@ class PDFOrganizerTab:
         # Advanced features
         advanced_frame = ttk.Frame(preview_frame)
         advanced_frame.pack(fill="x", expand=False, padx=5, pady=5)
-        
-        ttk.Button(advanced_frame, text="Add Annotation", command=self.add_annotation).pack(side="left", padx=5)
+
+        ttk.Button(advanced_frame, text="Insert from PDF...", command=self.insert_pages_from_pdf).pack(side="left", padx=5)
         ttk.Button(advanced_frame, text="Extract Page", command=self.extract_current_page).pack(side="left", padx=5)
         ttk.Button(advanced_frame, text="Duplicate Page", command=self.duplicate_page).pack(side="left", padx=5)
         ttk.Button(advanced_frame, text="Move to Position...", command=self.move_to_position).pack(side="left", padx=5)
@@ -407,6 +410,7 @@ class PDFOrganizerTab:
             self.all_pages.clear()
             self.selected_index = -1
             self.thumbnail_cache.clear()
+            self.page_rotations.clear()
             
             # Update preview and thumbnails
             self.update_preview()
@@ -560,13 +564,18 @@ class PDFOrganizerTab:
                 # Load the page
                 pdf = pdfium.PdfDocument(pdf_path)
                 page = pdf[page_idx]
-                
+
+                # Get rotation for this page (convert degrees to pdfium rotation values)
+                rotation_deg = self.page_rotations.get(self.selected_index, 0)
+                # pdfium rotation: 0=0, 1=90, 2=180, 3=270
+                pdfium_rotation = (rotation_deg // 90) % 4
+
                 # Render to image
                 pil_image = page.render(
                     scale=1.5,  # Higher quality for preview
-                    rotation=0
+                    rotation=pdfium_rotation
                 ).to_pil()
-                
+
                 # Display the image
                 self._display_preview_image(pil_image)
                 
@@ -703,26 +712,69 @@ class PDFOrganizerTab:
         self.status_var.set("Blank page inserted")
     
     def rotate_page(self, angle):
-        """Rotate the current page by the given angle"""
+        """Rotate the current page by the given angle (cumulative)"""
         if not self.all_pages or self.selected_index < 0:
             return
-            
-        # Note: This requires PyPDF2 to actually apply the rotation
-        # For now, just show a message
-        # In a full implementation, we would store rotation info and apply it when saving
-        messagebox.showinfo("Rotation", f"Page will be rotated by {angle} degrees when saving.")
-        self.status_var.set(f"Page rotation set to {angle} degrees")
+
+        current = self.page_rotations.get(self.selected_index, 0)
+        self.page_rotations[self.selected_index] = (current + angle) % 360
+        self.update_preview()
+        self.refresh_thumbnails()
+        self.status_var.set(f"Page rotated {angle} degrees (total: {self.page_rotations[self.selected_index]})")
     
-    def add_annotation(self):
-        """Add a text annotation to the current page"""
-        if not self.all_pages or self.selected_index < 0:
+    def insert_pages_from_pdf(self):
+        """Upload another PDF and insert its pages at the current position"""
+        file_path = filedialog.askopenfilename(
+            title="Select PDF to Insert Pages From",
+            filetypes=[("PDF Files", "*.pdf"), ("All Files", "*.*")]
+        )
+        if not file_path:
             return
-            
-        # Simple annotation implementation - just get text from user
-        annotation = simpledialog.askstring("Annotation", "Enter annotation text:")
-        if annotation:
-            messagebox.showinfo("Annotation", "Annotation will be added when saving.")
-            self.status_var.set("Annotation added")
+
+        try:
+            pdf = pdfium.PdfDocument(file_path)
+            num_pages = len(pdf)
+
+            # Ask which pages to insert
+            page_spec = simpledialog.askstring(
+                "Insert Pages",
+                f"PDF has {num_pages} pages.\nEnter pages to insert (e.g. 1-3,5) or leave empty for all:"
+            )
+
+            if page_spec is None:
+                return  # User canceled
+
+            # Parse page specification
+            pages_to_insert = []
+            if page_spec.strip():
+                for spec in page_spec.split(','):
+                    spec = spec.strip()
+                    if '-' in spec:
+                        start, end = map(int, spec.split('-'))
+                        pages_to_insert.extend(range(start - 1, end))
+                    else:
+                        pages_to_insert.append(int(spec) - 1)
+            else:
+                pages_to_insert = list(range(num_pages))
+
+            # Insert at current position (after selected page)
+            insert_idx = self.selected_index + 1 if self.selected_index >= 0 else len(self.all_pages)
+
+            for i, page_idx in enumerate(pages_to_insert):
+                if 0 <= page_idx < num_pages:
+                    self.all_pages.insert(insert_idx + i, (file_path, page_idx, False))
+
+            # Also add to source PDFs if not already there
+            if file_path not in self.source_pdfs:
+                self.source_pdfs.append(file_path)
+                self.pdf_listbox.insert(tk.END, os.path.basename(file_path))
+
+            self.update_preview()
+            self.refresh_thumbnails()
+            self.status_var.set(f"Inserted {len(pages_to_insert)} pages from {os.path.basename(file_path)}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to insert pages: {str(e)}")
     
     def extract_current_page(self):
         """Extract the current page to a separate PDF"""
@@ -865,7 +917,7 @@ class PDFOrganizerTab:
             
             # Create frame for thumbnail
             frame = ttk.Frame(self.thumbnails_container, width=thumb_width, height=thumb_height + 30)
-            frame.grid(row=row, col=col, padx=5, pady=5)
+            frame.grid(row=row, column=col, padx=5, pady=5)
             frame.pack_propagate(False)
             
             # Create canvas for thumbnail
@@ -875,8 +927,9 @@ class PDFOrganizerTab:
             # Create label for page number
             ttk.Label(frame, text=f"Page {idx + 1}").pack()
             
-            # Generate and display thumbnail
-            self._create_thumbnail(canvas, pdf_path, page_idx, is_blank, idx, thumb_width, thumb_height)
+            # Generate and display thumbnail (pass rotation)
+            rotation = self.page_rotations.get(idx, 0)
+            self._create_thumbnail(canvas, pdf_path, page_idx, is_blank, idx, thumb_width, thumb_height, rotation)
             
             # Bind click event
             canvas.bind("<Button-1>", lambda e, i=idx: self._select_thumbnail(i))
@@ -885,34 +938,30 @@ class PDFOrganizerTab:
         self.thumbnails_container.update_idletasks()
         self.thumb_canvas.configure(scrollregion=self.thumb_canvas.bbox("all"))
     
-    def _create_thumbnail(self, canvas, pdf_path, page_idx, is_blank, idx, width, height):
+    def _create_thumbnail(self, canvas, pdf_path, page_idx, is_blank, idx, width, height, rotation=0):
         """Create a thumbnail for the given page"""
-        # Check if thumbnail is already in cache
-        cache_key = f"{pdf_path}_{page_idx}_{is_blank}"
+        # Include rotation in cache key so rotated pages get re-rendered
+        cache_key = f"{pdf_path}_{page_idx}_{is_blank}_{rotation}"
         if cache_key in self.thumbnail_cache:
-            # Use cached thumbnail
             photo = self.thumbnail_cache[cache_key]
             canvas.create_image(width/2, height/2, image=photo, anchor=tk.CENTER, tags=f"thumb_{idx}")
             return
-            
-        # Create thumbnail in a separate thread
-        threading.Thread(target=self._generate_thumbnail, 
-                       args=(canvas, pdf_path, page_idx, is_blank, idx, width, height, cache_key)).start()
+
+        threading.Thread(target=self._generate_thumbnail,
+                       args=(canvas, pdf_path, page_idx, is_blank, idx, width, height, cache_key, rotation)).start()
     
-    def _generate_thumbnail(self, canvas, pdf_path, page_idx, is_blank, idx, width, height, cache_key):
+    def _generate_thumbnail(self, canvas, pdf_path, page_idx, is_blank, idx, width, height, cache_key, rotation=0):
         try:
             if is_blank:
-                # Create a blank page thumbnail
                 img = Image.new('RGB', (width, height), 'white')
             else:
-                # Load the page
                 pdf = pdfium.PdfDocument(pdf_path)
                 page = pdf[page_idx]
-                
-                # Render to image
+
+                pdfium_rotation = (rotation // 90) % 4
                 pil_image = page.render(
-                    scale=0.5,  # Lower quality for thumbnails
-                    rotation=0
+                    scale=0.5,
+                    rotation=pdfium_rotation
                 ).to_pil()
                 
                 # Resize to thumbnail size
@@ -1089,6 +1138,10 @@ class PDFOrganizerTab:
                     try:
                         reader = PdfReader(pdf_path)
                         page = reader.pages[page_idx]
+                        # Apply rotation if set
+                        rotation_deg = self.page_rotations.get(i, 0)
+                        if rotation_deg:
+                            page.rotate(rotation_deg)
                         writer.add_page(page)
                     except Exception as e:
                         self.frame.winfo_toplevel().after(0, lambda p=i+1, err=str(e): 

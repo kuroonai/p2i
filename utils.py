@@ -7,27 +7,31 @@ from PIL import Image, ImageTk
 
 def create_progress_frame(parent, progress_var, status_var, text="Progress"):
     """Create a reusable progress frame with progress bar and status label"""
-    progress_frame = ttk.LabelFrame(parent, text=text, padding=10)
-    progress_frame.pack(fill="x", expand=False, padx=10, pady=5)
-    
+    progress_frame = ttk.LabelFrame(parent, text=text, padding=(12, 8))
+    progress_frame.pack(fill="x", expand=False, padx=10, pady=(2, 5))
+
     # Progress bar
     progress = ttk.Progressbar(progress_frame, variable=progress_var, maximum=100)
-    progress.pack(fill="x", expand=True, padx=5, pady=5)
-    
+    progress.pack(fill="x", expand=True, padx=5, pady=(4, 2))
+
     # Status label
-    ttk.Label(progress_frame, textvariable=status_var).pack(fill="x", expand=True, padx=5, pady=5)
-    
+    ttk.Label(progress_frame, textvariable=status_var, style='Status.TLabel').pack(
+        fill="x", expand=True, padx=5, pady=(2, 4))
+
     return progress_frame
 
 def create_buttons_frame(parent, start_cmd, cancel_cmd, output_folder_cmd, start_text="Start"):
     """Create a reusable buttons frame with start, cancel, and open output folder buttons"""
-    buttons_frame = ttk.Frame(parent, padding=10)
-    buttons_frame.pack(fill="x", expand=False, padx=10, pady=5)
-    
-    ttk.Button(buttons_frame, text=start_text, command=start_cmd).pack(side="left", padx=5)
-    ttk.Button(buttons_frame, text="Cancel", command=cancel_cmd).pack(side="left", padx=5)
-    ttk.Button(buttons_frame, text="Open Output Folder", command=output_folder_cmd).pack(side="left", padx=5)
-    
+    buttons_frame = ttk.Frame(parent, padding=(10, 6))
+    buttons_frame.pack(fill="x", expand=False, padx=10, pady=(2, 8))
+
+    ttk.Button(buttons_frame, text=start_text, command=start_cmd,
+               style='Success.TButton').pack(side="left", padx=(0, 8))
+    ttk.Button(buttons_frame, text="Cancel", command=cancel_cmd,
+               style='Danger.TButton').pack(side="left", padx=(0, 8))
+    ttk.Button(buttons_frame, text="Open Output Folder", command=output_folder_cmd,
+               style='Secondary.TButton').pack(side="left", padx=(0, 8))
+
     return buttons_frame
 
 def display_preview(canvas, img, photo_ref):

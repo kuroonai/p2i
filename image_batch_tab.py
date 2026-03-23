@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk, ImageEnhance, ImageFilter
 import utils
+from styles import COLORS, FONTS
 
 class ImageBatchTab:
     def __init__(self, parent):

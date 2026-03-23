@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pypdfium2 as pdfium
 import utils
+from styles import COLORS, FONTS, create_drop_zone
 
 class PDFSplitTab:
     def __init__(self, parent):
@@ -101,7 +102,7 @@ class PDFSplitTab:
         
         ttk.Label(self.single_frame, text="Page Numbers:").pack(side="left", padx=5)
         ttk.Entry(self.single_frame, textvariable=self.single_pages, width=40).pack(side="left", padx=5, fill="x", expand=True)
-        ttk.Label(self.single_frame, text="(comma-separated, e.g. 1,3,5-7)").pack(side="left", padx=5)
+        ttk.Label(self.single_frame, text="(leave empty for all pages, or e.g. 1,3,5-7)").pack(side="left", padx=5)
         
         # Extract every N pages options
         self.extract_frame = ttk.Frame(options_frame)
@@ -202,13 +203,13 @@ class PDFSplitTab:
                 return
                 
         elif mode == "single":
-            if not self.single_pages.get().strip():
-                messagebox.showerror("Error", "Please enter page numbers to extract.")
-                return
-                
-            # Validate page numbers in another function to keep this one clean
-            if not self._validate_page_numbers():
-                return
+            # If page numbers are specified, validate them; otherwise split all pages
+            if self.single_pages.get().strip():
+                if not self._validate_page_numbers():
+                    return
+            else:
+                # No specific pages — will split all pages into individual files
+                self._pages_to_extract = []
                 
         elif mode == "extract":
             if self.page_interval.get() < 1:
@@ -323,53 +324,56 @@ class PDFSplitTab:
             raise Exception(f"Failed to split PDF by range: {error_msg}")
     
     def _split_single_pages(self):
-        """Extract specific pages from PDF"""
+        """Split PDF into individual single-page PDF files, one per page.
+        If page numbers are specified, only those pages are split out.
+        If no page numbers are specified, all pages are split."""
         try:
-            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Extracting selected pages..."))
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Splitting into single pages..."))
             self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(0))
-            
+
             # Get source PDF filename without extension
             pdf_basename = os.path.splitext(os.path.basename(self.pdf_path.get()))[0]
-            
-            # Create output filename
-            page_list = ','.join(str(p) for p in self._pages_to_extract)
-            if len(page_list) > 20:  # Truncate if too long
-                page_list = page_list[:20] + "..."
-            output_filename = f"{pdf_basename}_pages_{page_list}.pdf"
-            output_path = os.path.join(self.output_dir.get(), output_filename)
-            
+
             # Open source PDF
             source_pdf = pdfium.PdfDocument(self.pdf_path.get())
-            
-            # Create new PDF with selected pages
-            output_pdf = pdfium.PdfDocument.new()
-            
-            for i, page_num in enumerate(self._pages_to_extract):
+
+            # Determine which pages to extract
+            if self._pages_to_extract:
+                pages = self._pages_to_extract
+            else:
+                # No specific pages given — split all pages
+                pages = list(range(1, self.total_pages + 1))
+
+            output_files = []
+            for i, page_num in enumerate(pages):
                 if self.conversion_canceled:
-                    self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Extraction canceled"))
+                    self.frame.winfo_toplevel().after(0, lambda: self.status_var.set("Split canceled"))
                     return
-                
+
                 # Update progress
-                progress_pct = ((i + 1) / len(self._pages_to_extract)) * 100
+                progress_pct = ((i + 1) / len(pages)) * 100
                 self.frame.winfo_toplevel().after(0, lambda p=progress_pct: self.progress_var.set(p))
-                self.frame.winfo_toplevel().after(0, lambda p=page_num: 
-                    self.status_var.set(f"Processing page {p}..."))
-                
-                # Get page and add it to the output document
+                self.frame.winfo_toplevel().after(0, lambda p=page_num:
+                    self.status_var.set(f"Splitting page {p}..."))
+
+                # Create a new single-page PDF for each page
+                output_pdf = pdfium.PdfDocument.new()
                 output_pdf.import_pages(source_pdf, [page_num - 1])
-            
-            # Save the new PDF
-            output_pdf.save(output_path)
-            
+
+                output_filename = f"{pdf_basename}_page_{page_num}.pdf"
+                output_path = os.path.join(self.output_dir.get(), output_filename)
+                output_pdf.save(output_path)
+                output_files.append(output_filename)
+
             # Complete
             self.frame.winfo_toplevel().after(0, lambda: self.progress_var.set(100))
-            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Page extraction complete: {output_filename}"))
-            self.frame.winfo_toplevel().after(0, lambda: messagebox.showinfo("Success", 
-                f"Pages extracted successfully.\n{len(self._pages_to_extract)} pages extracted.\nSaved to: {output_path}"))
-            
+            self.frame.winfo_toplevel().after(0, lambda: self.status_var.set(f"Split complete: {len(output_files)} files created"))
+            self.frame.winfo_toplevel().after(0, lambda: messagebox.showinfo("Success",
+                f"PDF split into {len(output_files)} individual page files.\nSaved to: {self.output_dir.get()}"))
+
         except Exception as e:
             error_msg = str(e)
-            raise Exception(f"Failed to extract pages: {error_msg}")
+            raise Exception(f"Failed to split pages: {error_msg}")
     
     def _split_by_interval(self):
         """Extract every Nth page from PDF"""
