@@ -1,11 +1,22 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+import sys
 
+# Force PyInstaller to use the correct Tcl/Tk from this conda env,
+# not from C:\Python313 which has a different version (8.6.15 vs 8.6.13).
+conda_prefix = os.path.dirname(sys.executable)
+tcl_dir = os.path.join(conda_prefix, 'Library', 'lib', 'tcl8.6')
+tk_dir = os.path.join(conda_prefix, 'Library', 'lib', 'tk8.6')
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('resources', 'resources')],
+    datas=[
+        ('resources', 'resources'),
+        (tcl_dir, 'tcl/tcl8.6'),
+        (tk_dir, 'tcl/tk8.6'),
+    ],
     hiddenimports=['styles'],
     hookspath=[],
     hooksconfig={},
@@ -14,6 +25,17 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
+# Remove any Tcl/Tk data entries that PyInstaller auto-collected from the
+# wrong location (e.g. C:\Python313\tcl) to avoid version conflicts.
+a.datas = [
+    entry for entry in a.datas
+    if not (
+        entry[0].startswith('tcl\\') and
+        'Python313' in entry[1]
+    )
+]
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
