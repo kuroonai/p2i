@@ -135,3 +135,14 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Nuitka build artifacts
+nuitka-crash-report.xml
+*.build/
+*.onefile-build/
+
+# Inno Setup output
+installer_output/
+
+# Claude Code
+.claude/

@@ -1,0 +1,61 @@
+p2i v1.1.0 Release Notes
+========================
+
+## What's New
+
+### New Image Tools
+- **Image Format Conversion** — Convert between PNG, JPG, BMP, WEBP, TIFF, GIF, ICO with quality controls
+- **Image Resize** — Scale by percentage, exact dimensions, or max dimension with aspect ratio lock and resampling options (LANCZOS, BICUBIC, BILINEAR, NEAREST)
+- **Image Watermark** — Add text or image watermarks with opacity, position, rotation, and tile mode
+- **Image Metadata** — View EXIF data, copy to clipboard, strip metadata from single or batch images
+
+### PDF Compression Overhaul
+- Compression presets: Low, Medium, High, Custom
+- Custom preset unlocks DPI (36-600) and quality (10-100) sliders
+- New options: remove metadata, remove bookmarks, linearize (fast web view), subset fonts
+- Compression methods: Auto, Ghostscript, Image-based, Direct (PyPDF2)
+- Before/after file size comparison with reduction percentage display
+
+### Ghostscript Integration
+- Auto-detects Ghostscript installation (PATH + common install locations)
+- Status banner on Compress PDF tab (green = found, amber = not found with download link)
+- Ghostscript status shown in status bar and Preferences > Dependencies tab
+- Help > Ghostscript Setup guide with installation instructions
+
+### UI Improvements
+- Tabs reorganized into PDF tools (left) and Image tools (right) with visual separator
+- All dialog windows (Preferences, Help, About, operation choosers) now display the p2i icon
+- New "Support" menu in the menu bar with direct links to donation platforms
+- New "View" menu with PDF Tools / Image Tools submenus for quick tab navigation
+- Keyboard shortcuts: Ctrl+O (Open PDF), Ctrl+I (Open Image), Ctrl+, (Preferences), Ctrl+Q (Exit), F1 (Help)
+- Contribute dialog tabs now have scrollbars
+- Enhanced About dialog with version, credits, GitHub/Issues/Support links
+- Window opens maximized on startup
+
+### Installer
+- Inno Setup installer (.iss) with desktop/Start Menu shortcuts
+- MIT License shown as acceptance page during installation
+- Custom post-install page with clickable support/donation buttons
+- Ghostscript recommendation included in installer
+
+### Other Changes
+- Version centralized in version.py — all locations (status bar, about, check updates, contribute dialog, setup.py) pull from one source
+- Nuitka compatibility: application_path detection for __compiled__ executables
+- Drag-and-drop fixed: root window created via TkinterDnD.Tk() for proper tkdnd loading
+- Updated requirements.txt (removed unused pdf2image and tqdm dependencies)
+- Updated README.md, DISTRIBUTION.md, and docs/index.md with all new features
+- .gitignore updated for Nuitka artifacts, Inno Setup output, and Claude Code files
+
+## Requirements
+- Python 3.9+
+- Pillow >= 9.0.0
+- pypdfium2 >= 3.3.0
+- PyPDF2 >= 2.0.0
+- reportlab >= 3.6.0
+- tkinterdnd2 >= 0.3.0
+- Optional: Ghostscript for optimal PDF compression
+
+## Install
+Download the installer from the Releases page, or run from source:
+  pip install -r requirements.txt
+  python main.py
