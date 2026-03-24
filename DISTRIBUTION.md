@@ -19,22 +19,32 @@ Before packaging, ensure your project structure is properly organized:
 ```
 p2i/
 ├── main.py                 # Main application entry point
-├── pdf_merge_tab.py        # Tab modules
+├── version.py              # Centralized version string
+├── settings.py             # Settings management
+├── styles.py               # Modern UI theme and colors
+├── utils.py                # Utility functions
+├── drag_drop.py            # Drag and drop functionality
+├── ghostscript_utils.py    # Ghostscript detection and UI helpers
+├── contribute_dialog.py    # Contribution dialog
+├── pdf_merge_tab.py        # PDF tab modules
 ├── pdf_split_tab.py
 ├── pdf_compress_tab.py
 ├── pdf_to_image_tab.py
-├── image_to_pdf_tab.py
 ├── pdf_security_tab.py
+├── pdf_organizer_tab.py
+├── image_to_pdf_tab.py     # Image tab modules
+├── image_convert_tab.py
+├── image_resize_tab.py
 ├── image_batch_tab.py
-├── office_convert_tab.py
-├── utils.py                # Utility functions
-├── settings.py             # Settings management
-├── drag_drop.py            # Drag and drop functionality
-├── icons/                  # Application icons
-│   ├── app_icon.ico        # Windows icon
-│   ├── app_icon.icns       # macOS icon
-│   └── app_icon.png        # Linux icon
-├── LICENSE                 # License file
+├── image_watermark_tab.py
+├── image_metadata_tab.py
+├── support_tab.py          # Support/donation tab
+├── resources/
+│   └── icon/
+│       ├── app_icon.ico    # Windows icon
+│       └── app_icon.png    # Linux/macOS icon
+├── installer.iss           # Inno Setup installer script
+├── LICENSE                 # MIT License
 ├── README.md               # User documentation
 ├── DISTRIBUTION.md         # This file
 ├── requirements.txt        # Python dependencies

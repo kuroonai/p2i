@@ -53,6 +53,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+nuitka-crash-report.xml
 *.cover
 *.py,cover
 .hypothesis/

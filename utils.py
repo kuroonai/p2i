@@ -5,6 +5,33 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from PIL import Image, ImageTk
 
+
+def set_dialog_icon(dialog):
+    """Set the p2i icon on a Toplevel dialog window."""
+    try:
+        if os.name == 'nt':
+            # Try multiple icon locations for Windows
+            for icon_path in [
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "icon", "app_icon.ico"),
+                os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "resources", "icon", "app_icon.ico"),
+                os.path.join("resources", "icon", "app_icon.ico"),
+            ]:
+                if os.path.exists(icon_path):
+                    dialog.iconbitmap(icon_path)
+                    return
+        else:
+            for icon_path in [
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "icon", "app_icon.png"),
+                os.path.join("resources", "icon", "app_icon.png"),
+            ]:
+                if os.path.exists(icon_path):
+                    img = tk.PhotoImage(file=icon_path)
+                    dialog.iconphoto(True, img)
+                    dialog._icon_img = img  # prevent GC
+                    return
+    except Exception:
+        pass
+
 def create_progress_frame(parent, progress_var, status_var, text="Progress"):
     """Create a reusable progress frame with progress bar and status label"""
     progress_frame = ttk.LabelFrame(parent, text=text, padding=(12, 8))

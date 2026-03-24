@@ -20,28 +20,30 @@ setup(
     include_package_data=True,
     python_requires='>=3.9',  # Specify minimum Python version
     install_requires=[
-        "pdf2image>=1.16.3",
         "Pillow>=9.0.0",
-        "tqdm>=4.64.1",
         "pypdfium2>=3.3.0",
         "reportlab>=3.6.0",
         "PyPDF2>=2.0.0",
-        "tkinterdnd2>=0.3.0",  # For drag and drop functionality
+        "tkinterdnd2>=0.3.0",
     ],
     entry_points={
-        "console_scripts": ["p2i=p2i.main:main"],
+        "console_scripts": ["p2i=main:main"],
     },
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: End Users/Desktop",
+        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.9",  
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Operating System :: OS Independent",
         "Topic :: Multimedia :: Graphics :: Editors",
         "Topic :: Office/Business",
     ],
-    keywords="pdf, image, conversion, processing, tkinter",
-    license = "MIT",
+    keywords="pdf, image, conversion, processing, resize, watermark, metadata, compress, merge, split",
+    license="MIT",
     project_urls={
         "Bug Reports": "https://github.com/kuroonai/p2i/issues",
         "Source": "https://github.com/kuroonai/p2i",

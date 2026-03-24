@@ -14,7 +14,11 @@ Welcome to the official documentation for p2i (PDF & Image Tool), a free and ope
    - [PDF Security](#pdf-security)
    - [PDF Organizer](#pdf-organizer)
    - [Image to PDF](#image-to-pdf)
+   - [Image Format Conversion](#image-format-conversion)
+   - [Image Resize](#image-resize)
    - [Image Batch Processing](#image-batch-processing)
+   - [Image Watermark](#image-watermark)
+   - [Image Metadata](#image-metadata)
 4. [Advanced Usage](#advanced-usage)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
@@ -294,6 +298,60 @@ Convert one or more image files to a PDF document.
 - To create multi-page PDFs, add all images in the desired order
 - For consistent page layout, use images with similar dimensions
 
+### Image Format Conversion
+
+Convert images between formats with full control over quality settings.
+
+#### Usage
+
+1. Navigate to the "Convert Image" tab
+2. Click "Add Images" or "Add Folder" to select images
+3. Choose the output format (PNG, JPG, BMP, WEBP, TIFF, GIF, ICO)
+4. Adjust format-specific quality settings (JPEG quality, WebP quality, PNG compression)
+5. Set the output directory
+6. Click "Convert Images" to process
+
+#### Supported Formats
+
+- **JPEG**: Lossy compression with quality slider (10-100)
+- **PNG**: Lossless with compression level (0-9)
+- **WebP**: Modern format with quality slider (10-100)
+- **BMP**: Uncompressed bitmap
+- **TIFF**: Versatile format supporting multiple color modes
+- **GIF**: Limited color palette, good for simple graphics
+- **ICO**: Windows icon format (outputs 256x256)
+
+#### Tips
+
+- Enable "Preserve transparency" when converting from PNG/WEBP to formats that support alpha
+- When converting to JPEG, transparent areas are filled with white
+- Batch convert entire folders by using "Add Folder"
+
+### Image Resize
+
+Scale images by percentage, exact dimensions, or maximum dimension with aspect ratio control.
+
+#### Usage
+
+1. Navigate to the "Resize Image" tab
+2. Add images individually or by folder
+3. Choose resize mode: By Percentage, Exact Dimensions, or Max Dimension
+4. Select a resampling method (LANCZOS, BICUBIC, BILINEAR, NEAREST)
+5. Set the output format and directory
+6. Click "Resize Images"
+
+#### Resize Modes
+
+- **By Percentage**: Scale to 5-200% of original size
+- **Exact Dimensions**: Set specific width and height (optionally maintain aspect ratio)
+- **Max Dimension**: Constrain the longest side to a maximum pixel count
+
+#### Tips
+
+- LANCZOS resampling gives the best quality for downscaling
+- NEAREST is fastest but produces blocky results — use only for pixel art
+- Enable "Maintain aspect ratio" to prevent distortion
+
 ### Image Batch Processing
 
 Process multiple images with the same operations at once.
@@ -338,6 +396,65 @@ Process multiple images with the same operations at once.
 - For web images, the "Optimize" operation with 70-80% quality is usually a good balance
 - Batch processing can handle hundreds of images at once
 - Use meaningful filenames in the output to identify processed images
+
+### Image Watermark
+
+Add text or image watermarks to multiple images at once.
+
+#### Usage
+
+1. Navigate to the "Watermark" tab
+2. Add the images you want to watermark
+3. Choose watermark type: Text or Image
+4. Configure settings (opacity, position, rotation)
+5. Set the output directory
+6. Click "Apply Watermark"
+
+#### Text Watermark Options
+
+- **Text content**: The watermark text to display
+- **Font size**: Size of the watermark text (8-200)
+
+#### Image Watermark Options
+
+- **Watermark image**: Select a PNG/JPG to use as the watermark
+- **Scale**: Size of watermark relative to base image (5-100%)
+
+#### Common Options
+
+- **Opacity**: Transparency level (0 = invisible, 255 = fully opaque)
+- **Position**: Center, top-left, top-right, bottom-left, or bottom-right
+- **Rotation**: Angle in degrees (-180 to 180)
+- **Tile mode**: Repeat the watermark across the entire image
+
+#### Watermark Tips
+
+- For subtle watermarks, use 80-128 opacity
+- Tile mode with low opacity and diagonal rotation is effective for copyright protection
+- White text with moderate opacity works well on most images
+
+### Image Metadata
+
+View, copy, and strip EXIF metadata from images.
+
+#### Usage
+
+1. Navigate to the "Metadata" tab
+2. Click "Browse..." to select an image
+3. View basic image info (format, dimensions, color mode, file size)
+4. Browse all EXIF/metadata tags in the table
+
+#### Actions
+
+- **Copy All to Clipboard**: Copy all metadata as text for pasting into reports
+- **Strip All Metadata**: Remove all EXIF data from the current image (overwrites the file)
+- **Batch Strip Metadata**: Select multiple images and remove metadata from all of them
+
+#### Metadata Tips
+
+- Stripping metadata removes GPS location, camera info, and other potentially sensitive data
+- Always back up images before stripping metadata, as the operation overwrites the original file
+- GPS coordinates, camera model, and date taken are common EXIF fields to check for privacy
 
 ## Advanced Usage
 

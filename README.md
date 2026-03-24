@@ -1,13 +1,22 @@
 # p2i - Advanced PDF & Image Processing Tool
 
 p2i (PDF & Image) is a comprehensive GUI application for PDF and image operations, including:
-- PDF to Image conversion
+
+**PDF Tools:**
+
+- PDF merging, splitting, and page organizing
+- PDF compression (Ghostscript, PyPDF2, image-based with presets)
+- PDF to image conversion
+- PDF security (passwords, permissions) & watermarking
+
+**Image Tools:**
+
+- Image format conversion (PNG, JPG, BMP, WEBP, TIFF, GIF, ICO)
+- Image resizing/scaling with aspect ratio control
+- Batch image processing (resize, convert, adjust, optimize)
+- Image watermarking (text or image overlay)
+- Image metadata (EXIF) viewer and stripper
 - Image to PDF conversion
-- PDF merging
-- PDF splitting
-- PDF compression (with multiple methods)
-- PDF security & watermarking
-- Image batch processing
 
 ## Prerequisites
 
@@ -100,50 +109,23 @@ Make it executable: `chmod +x launch.sh`
 
 ## Features
 
-### PDF to Image Conversion
-- Convert entire PDFs or specific page ranges to images
-- Support for various image formats (JPG, PNG, TIFF, BMP)
-- Adjustable DPI and quality settings
-- Batch processing mode for multiple PDFs
+### PDF Tools
 
-### Image to PDF Conversion
-- Create PDFs from multiple image files
-- Rearrange images before conversion
-- Set page size, orientation, and margins
-- Adjust image quality in the resulting PDF
+- **Merge PDFs** — Combine multiple PDFs into a single document with drag-and-drop reordering
+- **Split PDF** — Extract page ranges, specific pages, or every Nth page
+- **Compress PDF** — Multiple methods (Ghostscript, PyPDF2, image-based) with Low/Medium/High/Custom presets, DPI and quality controls, before/after size comparison
+- **PDF to Image** — Convert pages to JPG, PNG, TIFF, BMP with adjustable DPI and batch mode
+- **PDF Security** — Password protection, permission controls, text/image watermarks
+- **PDF Organizer** — Visual page management: reorder, delete, insert blank, rotate, extract, duplicate
 
-### PDF Merging
-- Combine multiple PDFs into a single document
-- Rearrange PDFs before merging
-- Automatic page counting and information display
+### Image Tools
 
-### PDF Splitting
-- Extract specific page ranges
-- Extract individual pages by number
-- Extract every Nth page
-- Create new PDFs with selected content
-
-### PDF Compression
-- Multiple compression methods:
-  - Ghostscript-based compression (best quality and results)
-  - Direct compression with PyPDF2 (best for text-heavy PDFs)
-  - Image-based compression (good for graphics-heavy PDFs)
-- Three compression levels (low, medium, high)
-- Automatic PDF content analysis for optimal compression method selection
-- Size reduction information display
-
-### PDF Security & Watermarking
-- Password protection with owner/user passwords
-- Permission controls (printing, copying, modification)
-- Text and image watermarks with customizable position, opacity, and rotation
-- Password removal functionality
-
-### Image Batch Processing
-- Resize images with various options (percentage, dimensions, maximum dimension)
-- Convert between different image formats
-- Adjust brightness, contrast, and sharpness
-- Apply image filters
-- Optimize images for web/storage
+- **Image to PDF** — Create PDFs from multiple images with page size, orientation, and margin options
+- **Convert Image** — Format conversion between PNG, JPG, BMP, WEBP, TIFF, GIF, ICO with quality controls
+- **Resize Image** — Scale by percentage, exact dimensions, or max dimension with aspect ratio lock
+- **Batch Process** — Bulk resize, convert, adjust (brightness/contrast/sharpness/filters), optimize
+- **Watermark** — Text or image overlay with opacity, position, rotation, and tile mode
+- **Metadata** — View EXIF data, copy to clipboard, strip metadata from single or batch images
 
 ## Troubleshooting
 
@@ -179,51 +161,40 @@ If you encounter error messages, they will appear in dialog boxes with details a
 - Memory limitations with very large files
 - Missing dependencies
 
-## Installation
-
-### Linux
-
-#### Option 1: AppImage (Recommended)
-1. Download the AppImage from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
-2. Make it executable: `chmod +x p2i-1.0.0-x86_64.AppImage`
-3. Run it: `./p2i-1.0.0-x86_64.AppImage`
-
-#### Option 2: System Installation
-1. Download the release package from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
-2. Extract it: `tar -xzvf p2i-1.0.0-linux.tar.gz`
-3. Navigate to the extracted directory: `cd p2i-1.0.0-release/linux`
-4. Run the installer: `sudo ./install.sh`
-
-#### Verifying GPG Signature (Optional)
-1. Download both the AppImage and its signature (.asc file)
-2. Import the GPG key: `gpg --keyserver keyserver.ubuntu.com --recv-keys ABCD1234EFGH5678`
-3. Verify the signature: `gpg --verify p2i-1.0.0-x86_64.AppImage.asc p2i-1.0.0-x86_64.AppImage`
+## Pre-built Installers
 
 ### Windows
 
-#### Option 1: Standalone Executable
-1. Download the Windows package from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
-2. Extract the ZIP file: `p2i-1.0.0-windows.zip`
-3. Run the executable: `p2i.exe`
+1. Download the installer from [GitHub Releases](https://github.com/kuroonai/p2i/releases)
+2. Run `p2i-1.1.0-setup.exe` and follow the wizard
+3. Launch p2i from the Start menu or desktop shortcut
 
-#### Option 2: Create Desktop Shortcut
-1. Right-click on `p2i.exe` and select "Create shortcut"
-2. Move the shortcut to your desktop or start menu
-3. (Optional) Right-click the shortcut, select "Properties" and customize the icon
+### Building from source (Nuitka)
 
-### Combined Package
-If you need both Windows and Linux versions, download the combined package `p2i-1.0.0-release.tar.gz` which contains executables for both platforms.
+```bash
+python -m nuitka --standalone --mingw64 --windows-console-mode=disable \
+  --windows-icon-from-ico=resources/icon/app_icon.ico \
+  --enable-plugin=tk-inter --include-data-dir=resources=resources \
+  --output-filename=p2i.exe --output-dir=dist \
+  --assume-yes-for-downloads main.py
+```
+
+Then use the included `installer.iss` with [Inno Setup](https://jrsoftware.org/isinfo.php) to create the installer.
 
 ## Dependencies
 
-### Linux
-- Python 3.7 or later (included in AppImage)
-- Tkinter (included in AppImage)
-- Ghostscript (for PDF compression, included in AppImage)
+### Python packages
 
-### Windows
-- All dependencies are bundled in the executable
+- Pillow >= 9.0.0
+- pypdfium2 >= 3.3.0
+- PyPDF2 >= 2.0.0
+- reportlab >= 3.6.0
+- tkinterdnd2 >= 0.3.0
+
+### Optional
+
+- **Ghostscript** — Required for optimal PDF compression. Download from [ghostscript.com](https://www.ghostscript.com/releases/gsdnld.html) and ensure `gswin64c` is on your PATH. p2i auto-detects Ghostscript and shows its status in the Compress PDF tab and status bar.
 
 ## License
 
-This software is distributed under the MIT License. See the LICENSE file for more information.
+This software is distributed under the MIT License. See the [LICENSE](LICENSE) file for more information.

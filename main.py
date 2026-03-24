@@ -6,7 +6,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from tkinter.filedialog import askopenfilename, askdirectory
 import multiprocessing
-from pathlib import Path 
+from pathlib import Path
+import webbrowser
 
 # Import all tab modules
 from pdf_merge_tab import PDFMergeTab
@@ -17,15 +18,20 @@ from image_to_pdf_tab import ImageToPDFTab
 from pdf_security_tab import PDFSecurityTab
 from image_batch_tab import ImageBatchTab
 from pdf_organizer_tab import PDFOrganizerTab
+from image_convert_tab import ImageConvertTab
+from image_resize_tab import ImageResizeTab
+from image_watermark_tab import ImageWatermarkTab
+from image_metadata_tab import ImageMetadataTab
 from contribute_dialog import show_contribute_dialog
 from support_tab import SupportTab
-#from office_convert_tab import OfficeConvertTab
 
-# Import settings, drag drop, and styles
+# Import settings, drag drop, styles, utilities
 from settings import Settings
 from drag_drop import DragDropManager
 from styles import apply_modern_theme, COLORS, FONTS
 from version import VERSION
+from ghostscript_utils import is_ghostscript_available
+
 
 class P2IApp:
     def __init__(self, root):
@@ -34,131 +40,154 @@ class P2IApp:
         self.root.geometry("900x700")
         self.root.state('zoomed')
 
-        # Handle resource paths differently when running as script vs executable
+        # Determine application path for resources
         if getattr(sys, 'frozen', False):
-            # Running as PyInstaller executable
-            application_path = sys._MEIPASS  # type: ignore
+            self.application_path = sys._MEIPASS  # type: ignore
         elif "__compiled__" in dir():
-            # Running as Nuitka executable
-            application_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+            self.application_path = os.path.dirname(os.path.abspath(sys.argv[0]))
         else:
-            # Running as script
-            application_path = os.path.dirname(os.path.abspath(__file__))
-        
-        # Platform-specific icon handling
-        if os.name == 'nt':  # Windows
-            # Try both locations for the icon
-            icon_path = os.path.join(application_path, "resources", "icon", "app_icon.ico")
-            if not os.path.exists(icon_path):
-                # Try the root ico file as fallback
-                icon_path = os.path.join(application_path, "p2i.ico")
-            
-            if os.path.exists(icon_path):
-                try:
-                    self.root.iconbitmap(icon_path)
-                except Exception as e:
-                    print(f"Could not load icon: {e}")
-            else:
-                print(f"Icon not found at: {icon_path}")
-        else:  # Linux/Mac
-            try:
-                # For Linux/Mac, try PNG format
-                icon_path = os.path.join(application_path, "resources", "icon", "app_icon.png")
-                if os.path.exists(icon_path):
-                    img = tk.PhotoImage(file=icon_path)
-                    self.root.iconphoto(True, img)
-                else:
-                    print(f"Icon not found at: {icon_path}")
-            except Exception as e:
-                print(f"Could not load icon: {e}")
-        
+            self.application_path = os.path.dirname(os.path.abspath(__file__))
+
+        # Set window icon
+        self._set_window_icon(self.root)
+
         # Load settings
         self.settings = Settings()
 
         # Apply modern theme
         self.style = apply_modern_theme(root)
 
+        # Configure tab group styles
+        self.style.configure('PDFGroup.TLabelframe', background=COLORS['bg'])
+        self.style.configure('PDFGroup.TLabelframe.Label',
+                             foreground=COLORS['primary'], font=('Segoe UI', 9, 'bold'))
+        self.style.configure('ImageGroup.TLabelframe', background=COLORS['bg'])
+        self.style.configure('ImageGroup.TLabelframe.Label',
+                             foreground=COLORS['success'], font=('Segoe UI', 9, 'bold'))
+
         # Set up main notebook
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill="both", expand=True, padx=8, pady=(8, 4))
-        
+
         # Detect CPU count for parallel processing
-        n_cpu = max(1, multiprocessing.cpu_count() - 1)  # Leave one CPU free
-        
-        # Create tabs
+        n_cpu = max(1, multiprocessing.cpu_count() - 1)
+
+        # Create PDF tabs
         self.pdf_merge_tab = PDFMergeTab(self.notebook)
         self.pdf_split_tab = PDFSplitTab(self.notebook)
         self.pdf_compress_tab = PDFCompressTab(self.notebook)
         self.pdf_to_image_tab = PDFToImageTab(self.notebook, n_cpu)
-        self.image_to_pdf_tab = ImageToPDFTab(self.notebook)
         self.pdf_security_tab = PDFSecurityTab(self.notebook)
-        self.image_batch_tab = ImageBatchTab(self.notebook)
         self.pdf_organizer_tab = PDFOrganizerTab(self.notebook)
+
+        # Create Image tabs
+        self.image_to_pdf_tab = ImageToPDFTab(self.notebook)
+        self.image_convert_tab = ImageConvertTab(self.notebook)
+        self.image_resize_tab = ImageResizeTab(self.notebook)
+        self.image_batch_tab = ImageBatchTab(self.notebook)
+        self.image_watermark_tab = ImageWatermarkTab(self.notebook)
+        self.image_metadata_tab = ImageMetadataTab(self.notebook)
+
+        # Support tab
         self.support_tab = SupportTab(self.notebook)
-        #self.office_convert_tab = OfficeConvertTab(self.notebook)
-        
-        # Add tabs to notebook
-        self.notebook.add(self.pdf_merge_tab.frame, text="Merge PDFs")
-        self.notebook.add(self.pdf_split_tab.frame, text="Split PDF")
-        self.notebook.add(self.pdf_compress_tab.frame, text="Compress PDF")
-        self.notebook.add(self.pdf_to_image_tab.frame, text="PDF to Image")
-        self.notebook.add(self.image_to_pdf_tab.frame, text="Image to PDF")
-        self.notebook.add(self.pdf_security_tab.frame, text="PDF Security")
-        self.notebook.add(self.image_batch_tab.frame, text="Image Processing")
-        self.notebook.add(self.pdf_organizer_tab.frame, text="PDF Organizer")
-        self.notebook.add(self.support_tab.frame, text="Support p2i")
-        #self.notebook.add(self.office_convert_tab.frame, text="Office/Markdown to PDF")
-        
+
+        # Add PDF tabs (left group) with visual separator
+        self.notebook.add(self.pdf_merge_tab.frame, text=" Merge PDFs ")
+        self.notebook.add(self.pdf_split_tab.frame, text=" Split PDF ")
+        self.notebook.add(self.pdf_compress_tab.frame, text=" Compress PDF ")
+        self.notebook.add(self.pdf_to_image_tab.frame, text=" PDF to Image ")
+        self.notebook.add(self.pdf_security_tab.frame, text=" PDF Security ")
+        self.notebook.add(self.pdf_organizer_tab.frame, text=" PDF Organizer ")
+
+        # Separator tab (disabled visual divider)
+        sep_frame = ttk.Frame(self.notebook)
+        self.notebook.add(sep_frame, text=" | ", state="disabled")
+
+        # Add Image tabs (right group)
+        self.notebook.add(self.image_to_pdf_tab.frame, text=" Image to PDF ")
+        self.notebook.add(self.image_convert_tab.frame, text=" Convert Image ")
+        self.notebook.add(self.image_resize_tab.frame, text=" Resize Image ")
+        self.notebook.add(self.image_batch_tab.frame, text=" Batch Process ")
+        self.notebook.add(self.image_watermark_tab.frame, text=" Watermark ")
+        self.notebook.add(self.image_metadata_tab.frame, text=" Metadata ")
+
+        # Support tab at the end
+        self.notebook.add(self.support_tab.frame, text=" Support p2i ")
+
+        # Tab index map for easy reference
+        self._tab_indices = {
+            'merge': 0, 'split': 1, 'compress': 2, 'pdf_to_image': 3,
+            'security': 4, 'organizer': 5,
+            # 6 = separator (disabled)
+            'image_to_pdf': 7, 'convert_image': 8, 'resize_image': 9,
+            'batch_process': 10, 'watermark': 11, 'metadata': 12,
+            'support': 13,
+        }
+
         # Create main menu
         self.create_menu()
 
         self.apply_settings()
-        
+
         # Set up drag and drop
         self.setup_drag_drop()
-        
+
+        # Keyboard shortcuts
+        self.root.bind("<Control-o>", lambda e: self.open_pdf())
+        self.root.bind("<Control-i>", lambda e: self.open_image())
+        self.root.bind("<Control-comma>", lambda e: self.show_preferences())
+        self.root.bind("<Control-q>", lambda e: self.on_close())
+        self.root.bind("<F1>", lambda e: self.show_help())
+
         # Handle application close
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
-    
-    def set_app_icon(self):
-        # Try to set the icon based on the platform
-        if os.name == 'nt':  # Windows
-            icon_path = os.path.join("resources", "icon", "app_icon.ico")
-            if os.path.exists(icon_path):
-                try:
-                    self.root.iconbitmap(icon_path)
-                except Exception as e:
-                    print(f"Could not load Windows icon: {e}")
-                    # Try to use ico file from root as fallback
-                    if os.path.exists("p2i.ico"):
-                        try:
-                            self.root.iconbitmap("p2i.ico")
-                        except Exception as e:
-                            print(f"Could not load fallback icon: {e}")
-        else:  # Linux/Mac
-            # For Linux we need to use PhotoImage instead of iconbitmap
-            try:
-                # Try PNG first (commonly used in Linux)
-                icon_path = os.path.join("resources", "icon", "app_icon.png")
-                if not os.path.exists(icon_path):
-                    # If PNG doesn't exist, try to find other formats
-                    for ext in ['.png']:#, '.gif', '.ppm', '.xbm']:
-                        alt_path = os.path.join("resources", "icon", f"app_icon{ext}")
-                        if os.path.exists(alt_path):
-                            icon_path = alt_path
-                            break
-                
-                if os.path.exists(icon_path):
-                    icon_img = tk.PhotoImage(file=icon_path)
-                    self.root.iconphoto(True, icon_img)
-                else:
-                    print("No suitable icon found for this platform")
-            except Exception as e:
-                print(f"Could not load icon for Linux/Mac: {e}")
-                
+
+    def _set_window_icon(self, window):
+        """Set the p2i icon on any Tk or Toplevel window."""
+        try:
+            if os.name == 'nt':
+                for icon_path in [
+                    os.path.join(self.application_path, "resources", "icon", "app_icon.ico"),
+                    os.path.join("resources", "icon", "app_icon.ico"),
+                ]:
+                    if os.path.exists(icon_path):
+                        window.iconbitmap(icon_path)
+                        return
+            else:
+                for icon_path in [
+                    os.path.join(self.application_path, "resources", "icon", "app_icon.png"),
+                    os.path.join("resources", "icon", "app_icon.png"),
+                ]:
+                    if os.path.exists(icon_path):
+                        img = tk.PhotoImage(file=icon_path)
+                        window.iconphoto(True, img)
+                        window._icon_img = img
+                        return
+        except Exception as e:
+            print(f"Could not load icon: {e}")
+
+    def _create_dialog(self, title, geometry, grab=True):
+        """Create a Toplevel dialog with icon, centered on parent."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title(title)
+        dialog.geometry(geometry)
+        dialog.transient(self.root)
+        if grab:
+            dialog.grab_set()
+        self._set_window_icon(dialog)
+        return dialog
+
+    def _center_dialog(self, dialog):
+        """Center a dialog on screen."""
+        dialog.update_idletasks()
+        w = dialog.winfo_width()
+        h = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (w // 2)
+        y = (dialog.winfo_screenheight() // 2) - (h // 2)
+        dialog.geometry(f'{w}x{h}+{x}+{y}')
+
     def setup_drag_drop(self):
         """Set up drag and drop functionality"""
-        # Create list of widgets to receive dropped files
         drop_targets = [
             self.pdf_merge_tab.frame,
             self.pdf_split_tab.frame,
@@ -168,21 +197,24 @@ class P2IApp:
             self.pdf_to_image_tab.frame,
             self.image_to_pdf_tab.frame,
             self.image_batch_tab.frame,
-            self.support_tab.frame
-            #self.office_convert_tab.frame
+            self.image_convert_tab.frame,
+            self.image_resize_tab.frame,
+            self.image_watermark_tab.frame,
+            self.image_metadata_tab.frame,
+            self.support_tab.frame,
         ]
-        
-        # Initialize drag-drop manager
+
         self.dnd_manager = DragDropManager(self.root, self.settings, drop_targets)
-        
+
         # Status bar
         status_frame = tk.Frame(self.root, bg=COLORS['bg_card'], height=28)
         status_frame.pack(side="bottom", fill="x")
         status_frame.pack_propagate(False)
 
         dnd_text = "Drag & Drop enabled" if self.dnd_manager.is_available() else "Drag & Drop unavailable"
+        gs_text = "GS: Found" if is_ghostscript_available() else "GS: Not Found"
         self.status_bar = tk.Label(status_frame,
-            text=f"  p2i v{VERSION}  |  {dnd_text}",
+            text=f"  p2i v{VERSION}  |  {dnd_text}  |  {gs_text}",
             font=FONTS['caption'],
             fg=COLORS['text_muted'],
             bg=COLORS['bg_card'],
@@ -192,65 +224,91 @@ class P2IApp:
 
     def create_menu(self):
         menubar = tk.Menu(self.root)
-        
-        # File menu
+
+        # ---- File menu ----
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="Open PDF...", command=self.open_pdf)
         file_menu.add_command(label="Open Image...", command=self.open_image)
-        # file_menu.add_command(label="Open Office Document...", command=self.open_office_doc)
-        
-        # Recent files submenu
+        file_menu.add_separator()
         self.recent_menu = tk.Menu(file_menu, tearoff=0)
         self.update_recent_files_menu()
         file_menu.add_cascade(label="Recent Files", menu=self.recent_menu)
-        
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_close)
         menubar.add_cascade(label="File", menu=file_menu)
-        
-        # Tools menu
-        tools_menu = tk.Menu(menubar, tearoff=0)
-        tools_menu.add_command(label="Clear Recent Files", command=self.clear_recent_files)
-        tools_menu.add_command(label="Preferences...", command=self.show_preferences)
-        menubar.add_cascade(label="Tools", menu=tools_menu)
-        
+
+        # ---- Edit menu ----
+        edit_menu = tk.Menu(menubar, tearoff=0)
+        edit_menu.add_command(label="Preferences...", command=self.show_preferences)
+        edit_menu.add_command(label="Clear Recent Files", command=self.clear_recent_files)
+        menubar.add_cascade(label="Edit", menu=edit_menu)
+
+        # ---- View menu ----
+        view_menu = tk.Menu(menubar, tearoff=0)
+        pdf_menu = tk.Menu(view_menu, tearoff=0)
+        pdf_menu.add_command(label="Merge PDFs", command=lambda: self.notebook.select(self._tab_indices['merge']))
+        pdf_menu.add_command(label="Split PDF", command=lambda: self.notebook.select(self._tab_indices['split']))
+        pdf_menu.add_command(label="Compress PDF", command=lambda: self.notebook.select(self._tab_indices['compress']))
+        pdf_menu.add_command(label="PDF to Image", command=lambda: self.notebook.select(self._tab_indices['pdf_to_image']))
+        pdf_menu.add_command(label="PDF Security", command=lambda: self.notebook.select(self._tab_indices['security']))
+        pdf_menu.add_command(label="PDF Organizer", command=lambda: self.notebook.select(self._tab_indices['organizer']))
+        view_menu.add_cascade(label="PDF Tools", menu=pdf_menu)
+
+        img_menu = tk.Menu(view_menu, tearoff=0)
+        img_menu.add_command(label="Image to PDF", command=lambda: self.notebook.select(self._tab_indices['image_to_pdf']))
+        img_menu.add_command(label="Convert Image", command=lambda: self.notebook.select(self._tab_indices['convert_image']))
+        img_menu.add_command(label="Resize Image", command=lambda: self.notebook.select(self._tab_indices['resize_image']))
+        img_menu.add_command(label="Batch Process", command=lambda: self.notebook.select(self._tab_indices['batch_process']))
+        img_menu.add_command(label="Watermark", command=lambda: self.notebook.select(self._tab_indices['watermark']))
+        img_menu.add_command(label="Metadata", command=lambda: self.notebook.select(self._tab_indices['metadata']))
+        view_menu.add_cascade(label="Image Tools", menu=img_menu)
+        menubar.add_cascade(label="View", menu=view_menu)
+
+        # ---- Help menu ----
         help_menu = tk.Menu(menubar, tearoff=0)
-        help_menu.add_command(label="Help", command=self.show_help)
-        help_menu.add_command(label="Check for Updates", command=self.check_updates)
+        help_menu.add_command(label="User Guide", command=self.show_help)
+        help_menu.add_command(label="Ghostscript Setup", command=self.show_ghostscript_help)
+        help_menu.add_command(label="Keyboard Shortcuts", command=self.show_shortcuts)
         help_menu.add_separator()
+        help_menu.add_command(label="Check for Updates", command=self.check_updates)
         help_menu.add_command(label="Contribute to p2i", command=lambda: show_contribute_dialog(self.root))
         help_menu.add_separator()
-        help_menu.add_command(label="About", command=self.show_about)
+        help_menu.add_command(label="About p2i", command=self.show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
-        
+
+        # ---- Support menu (next to Help) ----
+        support_menu = tk.Menu(menubar, tearoff=0)
+        support_menu.add_command(label="GitHub Sponsors",
+                                 command=lambda: webbrowser.open("https://github.com/sponsors/kuroonai"))
+        support_menu.add_command(label="Patreon",
+                                 command=lambda: webbrowser.open("https://www.patreon.com/kuroonai"))
+        support_menu.add_command(label="Buy Me A Coffee",
+                                 command=lambda: webbrowser.open("https://www.buymeacoffee.com/kuroonai"))
+        support_menu.add_command(label="PayPal",
+                                 command=lambda: webbrowser.open("https://www.paypal.me/kuroonai"))
+        support_menu.add_separator()
+        support_menu.add_command(label="View Support Page",
+                                 command=lambda: self.notebook.select(self._tab_indices['support']))
+        menubar.add_cascade(label="Support", menu=support_menu)
+
         self.root.config(menu=menubar)
 
     def update_recent_files_menu(self):
-        """Update the recent files menu items"""
-        # Clear existing items
         self.recent_menu.delete(0, tk.END)
-        
-        # Get recent files
         recent_files = self.settings.get_recent_files()
-        
         if recent_files:
-            # Add each file to the menu
             for file_path in recent_files:
-                # Truncate very long paths
                 display_path = file_path
                 if len(display_path) > 60:
                     display_path = "..." + display_path[-57:]
-                    
                 self.recent_menu.add_command(
                     label=display_path,
                     command=lambda path=file_path: self.open_recent_file(path)
                 )
         else:
-            # Add a disabled item if no recent files
             self.recent_menu.add_command(label="No Recent Files", state=tk.DISABLED)
-    
+
     def open_pdf(self):
-        """Open a PDF file and switch to appropriate tab"""
         file_path = askopenfilename(
             title="Open PDF File",
             filetypes=[("PDF Files", "*.pdf"), ("All Files", "*.*")]
@@ -258,126 +316,79 @@ class P2IApp:
         if file_path:
             self.settings.add_recent_file(file_path)
             self.update_recent_files_menu()
-            
-            # Determine appropriate tab based on file type
+
             ext = os.path.splitext(file_path)[1].lower()
-            
             if ext == ".pdf":
-                # Ask user which operation to perform
                 operation = self.ask_pdf_operation()
-                
                 if operation == "merge":
-                    self.notebook.select(0)  # Merge tab
+                    self.notebook.select(self._tab_indices['merge'])
                     self.pdf_merge_tab.add_pdfs([file_path])
                 elif operation == "split":
-                    self.notebook.select(1)  # Split tab
+                    self.notebook.select(self._tab_indices['split'])
                     self.pdf_split_tab.pdf_path.set(file_path)
                     self.pdf_split_tab.get_page_count()
                 elif operation == "compress":
-                    self.notebook.select(2)  # Compress tab
+                    self.notebook.select(self._tab_indices['compress'])
                     self.pdf_compress_tab.pdf_path.set(file_path)
                     self.pdf_compress_tab.update_file_size_info()
                 elif operation == "to_image":
-                    self.notebook.select(3)  # PDF to Image tab
+                    self.notebook.select(self._tab_indices['pdf_to_image'])
                     self.pdf_to_image_tab.pdf_path.set(file_path)
                     self.pdf_to_image_tab.get_page_count()
                 elif operation == "security":
-                    self.notebook.select(5)  # PDF Security tab
+                    self.notebook.select(self._tab_indices['security'])
                     self.pdf_security_tab.pdf_path.set(file_path)
-    
+
     def open_image(self):
-        """Open an image file and switch to appropriate tab"""
         file_path = askopenfilename(
             title="Open Image File",
             filetypes=[
-                ("Image Files", "*.jpg *.jpeg *.png *.bmp *.tiff *.gif"),
+                ("Image Files", "*.jpg *.jpeg *.png *.bmp *.tiff *.gif *.webp"),
                 ("All Files", "*.*")
             ]
         )
         if file_path:
             self.settings.add_recent_file(file_path)
             self.update_recent_files_menu()
-            
-            # Ask user which operation to perform
+
             operation = self.ask_image_operation()
-            
             if operation == "to_pdf":
-                self.notebook.select(4)  # Image to PDF tab
+                self.notebook.select(self._tab_indices['image_to_pdf'])
                 self.image_to_pdf_tab.add_images([file_path])
+            elif operation == "convert":
+                self.notebook.select(self._tab_indices['convert_image'])
+                self.image_convert_tab.add_images([file_path])
+            elif operation == "resize":
+                self.notebook.select(self._tab_indices['resize_image'])
+                self.image_resize_tab.add_images([file_path])
             elif operation == "batch":
-                self.notebook.select(6)  # Image Processing tab
+                self.notebook.select(self._tab_indices['batch_process'])
                 self.image_batch_tab.selected_image_path.set(file_path)
                 self.image_batch_tab.show_preview_image(file_path)
-    '''
-    def open_office_doc(self):
-        """Open an office document and switch to appropriate tab"""
-        file_path = askopenfilename(
-            title="Open Office Document",
-            filetypes=[
-                ("Office Documents", "*.docx *.xlsx *.pptx *.doc *.xls *.ppt *.md *.txt"),
-                ("Word Documents", "*.docx *.doc"),
-                ("Excel Workbooks", "*.xlsx *.xls"),
-                ("PowerPoint Presentations", "*.pptx *.ppt"),
-                ("Markdown Files", "*.md *.txt"),
-                ("All Files", "*.*")
-            ]
-        )
-        if file_path:
-            self.settings.add_recent_file(file_path)
-            self.update_recent_files_menu()
-            
-            # Switch to Office Convert tab
-            self.notebook.select(7)  # Office/Markdown to PDF tab
-            self.office_convert_tab.input_path.set(file_path)
-            
-            # Set file type based on extension
-            ext = os.path.splitext(file_path)[1].lower()
-            if ext in [".docx", ".doc"]:
-                self.office_convert_tab.file_type.set("word")
-            elif ext in [".xlsx", ".xls"]:
-                self.office_convert_tab.file_type.set("excel")
-            elif ext in [".pptx", ".ppt"]:
-                self.office_convert_tab.file_type.set("powerpoint")
-            elif ext in [".md", ".txt"]:
-                self.office_convert_tab.file_type.set("markdown")
-            else:
-                self.office_convert_tab.file_type.set("auto")
-            
-            # Update visible options
-            self.office_convert_tab.on_file_type_change(None)
-            
-            # Set default output name
-            input_basename = os.path.splitext(os.path.basename(file_path))[0]
-            self.office_convert_tab.output_name.set(f"{input_basename}.pdf")
-    '''
+            elif operation == "watermark":
+                self.notebook.select(self._tab_indices['watermark'])
+                self.image_watermark_tab.add_images([file_path])
+            elif operation == "metadata":
+                self.notebook.select(self._tab_indices['metadata'])
+                self.image_metadata_tab.set_image(file_path)
+
     def open_recent_file(self, file_path):
-        """Open a file from the recent files list"""
         if not os.path.exists(file_path):
             messagebox.showerror("Error", f"File not found: {file_path}")
-            # Remove from recent files
             self.settings.settings['recent_files'].remove(file_path)
             self.settings.save_settings()
             self.update_recent_files_menu()
             return
-        
-        # Determine file type
+
         ext = os.path.splitext(file_path)[1].lower()
-        
         if ext == ".pdf":
-            # For PDFs, ask what operation to perform
             self.open_pdf()
-        elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"]:
-            # For images
+        elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif", ".webp"]:
             self.open_image()
-        # elif ext in [".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt", ".md", ".txt"]:
-        #     # For office documents
-        #     self.open_office_doc()
         else:
-            # For unknown types
             messagebox.showinfo("Info", f"Unknown file type: {ext}")
-    
+
     def ask_pdf_operation(self):
-        """Ask user which operation to perform on a PDF"""
         operations = {
             "Merge with other PDFs": "merge",
             "Split into parts": "split",
@@ -385,92 +396,62 @@ class P2IApp:
             "Convert to images": "to_image",
             "Add security/watermark": "security"
         }
-        
-        # Create a simple dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Choose Operation")
-        dialog.geometry("400x300")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        ttk.Label(dialog, text="What would you like to do with this PDF?", 
-                font=("Helvetica", 12)).pack(pady=10)
-        
-        # Variable to store result
+
+        dialog = self._create_dialog("Choose Operation", "400x300")
+
+        ttk.Label(dialog, text="What would you like to do with this PDF?",
+                font=FONTS['subheading']).pack(pady=10)
+
         result = tk.StringVar()
-        
-        # Create buttons for each operation
         for label, value in operations.items():
             ttk.Button(dialog, text=label, width=30,
                      command=lambda v=value: [result.set(v), dialog.destroy()]).pack(pady=5)
-        
+
         ttk.Button(dialog, text="Cancel", width=30,
-                 command=dialog.destroy).pack(pady=10)
-        
-        # Center the dialog
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-        
-        # Wait for dialog to close
+                 command=dialog.destroy, style="Secondary.TButton").pack(pady=10)
+
+        self._center_dialog(dialog)
         self.root.wait_window(dialog)
         return result.get()
-    
+
     def ask_image_operation(self):
-        """Ask user which operation to perform on an image"""
         operations = {
             "Convert to PDF": "to_pdf",
-            "Process/Edit Image": "batch"
+            "Convert Format": "convert",
+            "Resize Image": "resize",
+            "Process/Edit Image": "batch",
+            "Add Watermark": "watermark",
+            "View Metadata": "metadata",
         }
-        
-        # Create a simple dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Choose Operation")
-        dialog.geometry("350x200")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
-        ttk.Label(dialog, text="What would you like to do with this image?", 
-                font=("Helvetica", 12)).pack(pady=10)
-        
-        # Variable to store result
+
+        dialog = self._create_dialog("Choose Operation", "400x380")
+
+        ttk.Label(dialog, text="What would you like to do with this image?",
+                font=FONTS['subheading']).pack(pady=10)
+
         result = tk.StringVar()
-        
-        # Create buttons for each operation
         for label, value in operations.items():
             ttk.Button(dialog, text=label, width=30,
-                     command=lambda v=value: [result.set(v), dialog.destroy()]).pack(pady=5)
-        
+                     command=lambda v=value: [result.set(v), dialog.destroy()]).pack(pady=4)
+
         ttk.Button(dialog, text="Cancel", width=30,
-                 command=dialog.destroy).pack(pady=10)
-        
-        # Center the dialog
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-        
-        # Wait for dialog to close
+                 command=dialog.destroy, style="Secondary.TButton").pack(pady=10)
+
+        self._center_dialog(dialog)
         self.root.wait_window(dialog)
         return result.get()
-    
+
     def handle_dropped_files(self, files):
         """Process files that were dropped onto the application"""
         if not files:
             return
 
-        # Validate file types and filter
         valid_files = []
         rejected = []
         for f in files:
             ext = os.path.splitext(f)[1].lower()
-            if ext in ['.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif',
-                       '.docx', '.xlsx', '.pptx', '.doc', '.xls', '.ppt', '.md', '.txt']:
+            if ext in ['.pdf', '.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.gif', '.webp',
+                       '.tif', '.ico']:
                 valid_files.append(f)
             else:
                 rejected.append(os.path.basename(f))
@@ -486,53 +467,36 @@ class P2IApp:
 
         files = valid_files
 
-        # Add files to recent list
         for file_path in files:
             self.settings.add_recent_file(file_path)
-        
         self.update_recent_files_menu()
-        
-        # Determine file types
+
         pdf_files = []
         image_files = []
-        office_files = []
-        
         for file_path in files:
             ext = os.path.splitext(file_path)[1].lower()
             if ext == ".pdf":
                 pdf_files.append(file_path)
-            elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".gif"]:
+            elif ext in [".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".gif", ".webp", ".ico"]:
                 image_files.append(file_path)
-            elif ext in [".docx", ".xlsx", ".pptx", ".doc", ".xls", ".ppt", ".md", ".txt"]:
-                office_files.append(file_path)
-        
-        # Handle based on current tab and dropped file types
+
         current_tab_idx = self.notebook.index(self.notebook.select())
-        
-        if current_tab_idx == 0 and pdf_files:  # Merge PDFs tab
+        ti = self._tab_indices
+
+        if current_tab_idx == ti['merge'] and pdf_files:
             self.pdf_merge_tab.add_pdfs(pdf_files)
-        elif current_tab_idx == 1 and len(pdf_files) == 1:  # Split PDF tab
+        elif current_tab_idx == ti['split'] and len(pdf_files) == 1:
             self.pdf_split_tab.pdf_path.set(pdf_files[0])
             self.pdf_split_tab.get_page_count()
-        elif current_tab_idx == 2 and len(pdf_files) == 1:  # Compress PDF tab
+        elif current_tab_idx == ti['compress'] and len(pdf_files) == 1:
             self.pdf_compress_tab.pdf_path.set(pdf_files[0])
             self.pdf_compress_tab.update_file_size_info()
-        elif current_tab_idx == 3 and len(pdf_files) == 1:  # PDF to Image tab
+        elif current_tab_idx == ti['pdf_to_image'] and len(pdf_files) == 1:
             self.pdf_to_image_tab.pdf_path.set(pdf_files[0])
             self.pdf_to_image_tab.get_page_count()
-        elif current_tab_idx == 4 and image_files:  # Image to PDF tab
-            self.image_to_pdf_tab.add_images(image_files)
-        elif current_tab_idx == 5 and len(pdf_files) == 1:  # PDF Security tab
+        elif current_tab_idx == ti['security'] and len(pdf_files) == 1:
             self.pdf_security_tab.pdf_path.set(pdf_files[0])
-        elif current_tab_idx == 6 and image_files:  # Image Processing tab
-            if len(image_files) == 1:
-                self.image_batch_tab.selected_image_path.set(image_files[0])
-                self.image_batch_tab.show_preview_image(image_files[0])
-            else:
-                # If multiple images, set the images directory to the parent folder of the first image
-                parent_dir = os.path.dirname(image_files[0])
-                self.image_batch_tab.images_dir.set(parent_dir)
-        elif current_tab_idx == 7 and pdf_files:  # PDF Organizer tab
+        elif current_tab_idx == ti['organizer'] and pdf_files:
             for pdf_path in pdf_files:
                 self.pdf_organizer_tab.source_pdfs.append(pdf_path)
                 self.pdf_organizer_tab.pdf_listbox.insert(tk.END, os.path.basename(pdf_path))
@@ -541,101 +505,98 @@ class P2IApp:
                 self.pdf_organizer_tab.selected_index = 0
                 self.pdf_organizer_tab.update_preview()
             self.pdf_organizer_tab.refresh_thumbnails()
-        # elif current_tab_idx == 7 and (office_files or pdf_files):  # Office/Markdown to PDF tab
-        #     file_to_use = office_files[0] if office_files else pdf_files[0]
-        #     self.office_convert_tab.input_path.set(file_to_use)
-            
-        #     # Set file type based on extension
-        #     ext = os.path.splitext(file_to_use)[1].lower()
-        #     if ext in [".docx", ".doc"]:
-        #         self.office_convert_tab.file_type.set("word")
-        #     elif ext in [".xlsx", ".xls"]:
-        #         self.office_convert_tab.file_type.set("excel")
-        #     elif ext in [".pptx", ".ppt"]:
-        #         self.office_convert_tab.file_type.set("powerpoint")
-        #     elif ext in [".md", ".txt"]:
-        #         self.office_convert_tab.file_type.set("markdown")
-        #     else:
-        #         self.office_convert_tab.file_type.set("auto")
-            
-        #     # Update visible options
-        #     self.office_convert_tab.on_file_type_change(None)
-            
-        #     # Set default output name
-        #     input_basename = os.path.splitext(os.path.basename(file_to_use))[0]
-        #     self.office_convert_tab.output_name.set(f"{input_basename}.pdf")
-    
+        elif current_tab_idx == ti['image_to_pdf'] and image_files:
+            self.image_to_pdf_tab.add_images(image_files)
+        elif current_tab_idx == ti['convert_image'] and image_files:
+            self.image_convert_tab.add_images(image_files)
+        elif current_tab_idx == ti['resize_image'] and image_files:
+            self.image_resize_tab.add_images(image_files)
+        elif current_tab_idx == ti['batch_process'] and image_files:
+            if len(image_files) == 1:
+                self.image_batch_tab.selected_image_path.set(image_files[0])
+                self.image_batch_tab.show_preview_image(image_files[0])
+            else:
+                parent_dir = os.path.dirname(image_files[0])
+                self.image_batch_tab.images_dir.set(parent_dir)
+        elif current_tab_idx == ti['watermark'] and image_files:
+            self.image_watermark_tab.add_images(image_files)
+        elif current_tab_idx == ti['metadata'] and len(image_files) == 1:
+            self.image_metadata_tab.set_image(image_files[0])
+
     def clear_recent_files(self):
-        """Clear the list of recent files"""
         result = messagebox.askyesno("Confirm", "Clear all recent files?")
         if result:
             self.settings.settings['recent_files'] = []
             self.settings.save_settings()
             self.update_recent_files_menu()
-    
+
     def show_preferences(self):
-        """Show preferences dialog"""
-        # Create a simple preferences dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Preferences")
-        dialog.geometry("500x400")
-        dialog.transient(self.root)
-        dialog.grab_set()
-        
+        dialog = self._create_dialog("Preferences", "550x450")
+
         notebook = ttk.Notebook(dialog)
         notebook.pack(fill="both", expand=True, padx=10, pady=10)
-        
+
         # General preferences
         general_frame = ttk.Frame(notebook)
         notebook.add(general_frame, text="General")
-        
-        # Theme selection
+
         ttk.Label(general_frame, text="Theme:").grid(row=0, column=0, sticky="w", padx=10, pady=5)
         theme_var = tk.StringVar(value=self.settings.settings.get('theme', 'default'))
-        theme_combo = ttk.Combobox(general_frame, textvariable=theme_var, 
-                                 values=["default", "light", "dark"], width=15)
-        theme_combo.grid(row=0, column=1, sticky="w", padx=10, pady=5)
-        
-        # Max recent files
+        ttk.Combobox(general_frame, textvariable=theme_var,
+                     values=["default", "light", "dark"], width=15).grid(row=0, column=1, sticky="w", padx=10, pady=5)
+
         ttk.Label(general_frame, text="Maximum Recent Files:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
         max_recent_var = tk.IntVar(value=self.settings.settings.get('max_recent_files', 10))
         ttk.Spinbox(general_frame, from_=1, to=50, textvariable=max_recent_var, width=5).grid(row=1, column=1, sticky="w", padx=10, pady=5)
-        
-        # Confirm overwrite
+
         confirm_overwrite_var = tk.BooleanVar(value=self.settings.settings.get('confirm_overwrite', True))
-        ttk.Checkbutton(general_frame, text="Confirm before overwriting existing files", 
+        ttk.Checkbutton(general_frame, text="Confirm before overwriting existing files",
                       variable=confirm_overwrite_var).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=5)
-        
-        # Remember last directory
+
         remember_dir_var = tk.BooleanVar(value=self.settings.settings.get('remember_last_directory', True))
-        ttk.Checkbutton(general_frame, text="Remember last used directories", 
+        ttk.Checkbutton(general_frame, text="Remember last used directories",
                       variable=remember_dir_var).grid(row=3, column=0, columnspan=2, sticky="w", padx=10, pady=5)
-        
-        # Directories preferences
+
+        # Directories
         dir_frame = ttk.Frame(notebook)
         notebook.add(dir_frame, text="Directories")
-        
-        # Default PDF output directory
+
         ttk.Label(dir_frame, text="Default PDF Output Directory:").grid(row=0, column=0, sticky="w", padx=10, pady=5)
         pdf_dir_var = tk.StringVar(value=self.settings.settings.get('default_output_dir', str(Path.home() / "Documents")))
         ttk.Entry(dir_frame, textvariable=pdf_dir_var, width=40).grid(row=0, column=1, sticky="ew", padx=10, pady=5)
-        ttk.Button(dir_frame, text="Browse...", 
-                 command=lambda: self._browse_dir_for_var(pdf_dir_var)).grid(row=0, column=2, sticky="e", padx=10, pady=5)
-        
-        # Default Image output directory
+        ttk.Button(dir_frame, text="Browse...",
+                 command=lambda: self._browse_dir_for_var(pdf_dir_var)).grid(row=0, column=2, padx=10, pady=5)
+
         ttk.Label(dir_frame, text="Default Image Output Directory:").grid(row=1, column=0, sticky="w", padx=10, pady=5)
         img_dir_var = tk.StringVar(value=self.settings.settings.get('default_image_output_dir', str(Path.home() / "Pictures")))
         ttk.Entry(dir_frame, textvariable=img_dir_var, width=40).grid(row=1, column=1, sticky="ew", padx=10, pady=5)
-        ttk.Button(dir_frame, text="Browse...", 
-                 command=lambda: self._browse_dir_for_var(img_dir_var)).grid(row=1, column=2, sticky="e", padx=10, pady=5)
-        
-        # Make column 1 expand
+        ttk.Button(dir_frame, text="Browse...",
+                 command=lambda: self._browse_dir_for_var(img_dir_var)).grid(row=1, column=2, padx=10, pady=5)
+
         dir_frame.columnconfigure(1, weight=1)
-        
+
+        # Dependencies
+        dep_frame = ttk.Frame(notebook)
+        notebook.add(dep_frame, text="Dependencies")
+
+        from ghostscript_utils import create_gs_banner, get_ghostscript
+        gs_exe, gs_ver = get_ghostscript()
+
+        ttk.Label(dep_frame, text="Ghostscript", style="Subheading.TLabel").grid(row=0, column=0, sticky="w", padx=10, pady=(10, 2))
+        if gs_exe:
+            ttk.Label(dep_frame, text=f"Status: Found (v{gs_ver})", foreground=COLORS['success']).grid(row=1, column=0, sticky="w", padx=10, pady=2)
+            ttk.Label(dep_frame, text=f"Path: {gs_exe}").grid(row=2, column=0, sticky="w", padx=10, pady=2)
+        else:
+            ttk.Label(dep_frame, text="Status: Not Found", foreground=COLORS['error']).grid(row=1, column=0, sticky="w", padx=10, pady=2)
+            ttk.Label(dep_frame, text="Required for optimal PDF compression.\nInstall from ghostscript.com and ensure gswin64c is on PATH.",
+                      wraplength=400, justify="left").grid(row=2, column=0, sticky="w", padx=10, pady=2)
+            ttk.Button(dep_frame, text="Download Ghostscript",
+                       command=lambda: webbrowser.open("https://www.ghostscript.com/releases/gsdnld.html")).grid(row=3, column=0, sticky="w", padx=10, pady=5)
+
         # Buttons
         btn_frame = ttk.Frame(dialog)
         btn_frame.pack(fill="x", padx=10, pady=10)
-        
+
         def save_preferences():
             self.settings.settings['theme'] = theme_var.get()
             self.settings.settings['max_recent_files'] = max_recent_var.get()
@@ -649,214 +610,207 @@ class P2IApp:
             dialog.destroy()
             messagebox.showinfo("Success", "Preferences saved successfully.")
 
-        ttk.Button(btn_frame, text="Save",
-                 command=save_preferences).pack(side="right", padx=5)
-        ttk.Button(btn_frame, text="Cancel",
-                 command=dialog.destroy).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="Save", command=save_preferences).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=dialog.destroy, style="Secondary.TButton").pack(side="right", padx=5)
+
+        self._center_dialog(dialog)
 
     def apply_settings(self):
-        """Apply current settings to the application"""
-        # Apply theme if changed
         theme = self.settings.settings.get('theme', 'default')
         self._apply_theme(theme)
-        
-        # Update recent files max limit
-        # Already handled by self.update_recent_files_menu()
-        
-        # Update default directories in each tab that uses them
+
         default_output_dir = self.settings.settings.get('default_output_dir')
         default_image_dir = self.settings.settings.get('default_image_output_dir')
-        
-        # Only update if the directory exists
+
         if default_output_dir and os.path.isdir(default_output_dir):
-            # Update output directory in PDF-related tabs
-            tabs_with_pdf_output = [
-                self.pdf_merge_tab,
-                self.pdf_split_tab,
-                self.pdf_compress_tab,
-                self.pdf_security_tab,
-                #self.office_convert_tab
-            ]
-            for tab in tabs_with_pdf_output:
+            for tab in [self.pdf_merge_tab, self.pdf_split_tab, self.pdf_compress_tab, self.pdf_security_tab]:
                 if hasattr(tab, 'output_dir') and not tab.output_dir.get():
                     tab.output_dir.set(default_output_dir)
-        
+
         if default_image_dir and os.path.isdir(default_image_dir):
-            # Update output directory in image-related tabs
-            tabs_with_image_output = [
-                self.pdf_to_image_tab,
-                self.image_batch_tab
-            ]
-            for tab in tabs_with_image_output:
+            for tab in [self.pdf_to_image_tab, self.image_batch_tab]:
                 if hasattr(tab, 'output_dir') and not tab.output_dir.get():
                     tab.output_dir.set(default_image_dir)
 
     def _apply_theme(self, theme_name):
-        """Apply the selected theme to the application.
-        The modern theme is always applied as a base; theme_name is kept for future use."""
-        # The modern theme is applied at startup via apply_modern_theme().
-        # This method is kept for settings compatibility.
         pass
-    
+
     def _browse_dir_for_var(self, var):
-        """Browse for a directory and set it to the given variable"""
         directory = askdirectory(
             title="Select Directory",
             initialdir=var.get() if var.get() else os.getcwd()
         )
         if directory:
             var.set(directory)
-    
+
     def show_help(self):
-        """Show help information"""
+        help_text = f"""p2i v{VERSION} - PDF & Image Processing Tool - User Guide
 
-        help_text = """p2i - PDF & Image Processing Tool - User Guide
+QUICK START
+- Use the tabs at the top to select different tools
+- PDF tools are on the left, Image tools are on the right
+- Drag and drop files directly onto any tab
+- For most operations: select input, set options, click Process
 
-                    QUICK START
-                    - Use the tabs at the top to select different tools
-                    - For most operations: select input file(s), set options, choose output location, click Process/Convert button
-                    - Drag and drop files directly onto any tab for quicker workflow
+PDF TOOLS
 
-                    PDF TOOLS
+1. Merge PDFs - Combine multiple PDFs into one document
+2. Split PDF - Extract pages or split into parts
+3. Compress PDF - Reduce PDF file size (supports Ghostscript)
+4. PDF to Image - Convert PDF pages to image files
+5. PDF Security - Add passwords and watermarks
+6. PDF Organizer - Reorder, delete, and manage pages
 
-                    1. Merge PDFs
-                    • Click "Add PDFs" to select multiple PDF files
-                    • Reorder them using Move Up/Down buttons
-                    • Set output location and filename
-                    • Click "Merge PDFs" to combine them into a single document
+IMAGE TOOLS
 
-                    2. Split PDF
-                    • Select a PDF file to split
-                    • Choose split mode:
-                        - Page Range: Extract a specific range of pages
-                        - Single Pages: Extract specific page numbers (e.g., 1,3,5-7)
-                        - Extract Every N Pages: Take every Nth page
-                    • Set output location
-                    • Click "Split PDF" to create new PDF(s)
+7. Image to PDF - Convert images to PDF documents
+8. Convert Image - Change format (PNG, JPG, BMP, WEBP, TIFF, etc.)
+9. Resize Image - Scale images by percentage or dimensions
+10. Batch Process - Resize, convert, adjust, optimize in bulk
+11. Watermark - Add text or image watermarks to images
+12. Metadata - View and strip EXIF data from images
 
-                    3. Compress PDF
-                    • Select a PDF to compress
-                    • Choose compression level (low, medium, high)
-                    • Select compression method:
-                        - Auto: Analyzes content and chooses best method
-                        - Image-based: Best for documents with many images
-                        - Direct: Best for text-heavy documents
-                    • Click "Compress PDF" to reduce file size
+TIPS
+- Use Preview where available to check results before processing
+- Check the status bar for Ghostscript and drag-drop status
+- Right-click lists for context menus
+- Use Edit > Preferences to set default output directories
+"""
 
-                    4. PDF to Image
-                    • Select a PDF to convert to images
-                    • Set page range, DPI, and image format
-                    • Use "Preview" to see how the output will look
-                    • For multiple PDFs, check "Batch Mode"
-                    • Click "Convert PDF to Images" to process
+        dialog = self._create_dialog("User Guide", "650x550", grab=False)
 
-                    5. Image to PDF
-                    • Click "Add Images" to select images to combine
-                    • Reorder them using Move Up/Down buttons
-                    • Set page size, orientation, and margins
-                    • Click "Create PDF from Images" to convert
-
-                    6. PDF Security
-                    • Select a PDF file
-                    • For password protection:
-                        - Check "Enable Password Protection"
-                        - Set owner and/or user passwords
-                        - Configure permissions (printing, copying, etc.)
-                    • For watermarking:
-                        - Check "Add Watermark"
-                        - Choose text or image watermark
-                        - Set position, opacity, and rotation
-                    • Click "Process PDF" to apply changes
-
-                    IMAGE TOOLS
-
-                    7. Image Processing
-                    • Select input directory containing images
-                    • Choose operation type:
-                        - Resize: Change dimensions using various methods
-                        - Convert: Change image format with quality options
-                        - Adjust: Modify brightness, contrast, filters
-                        - Optimize: Reduce file size for web/sharing
-                    • Preview changes on sample image
-                    • Click "Process Images" to batch process all images
-
-                    8. Office/Markdown to PDF
-                    • Select Office document (Word, Excel, PowerPoint) or Markdown file
-                    • Set conversion options specific to the file type
-                    • Choose output location and filename
-                    • Click "Convert to PDF" to transform document
-
-                    TIPS
-                    - Use the "Preview" feature where available to check results before processing
-                    - For batch operations, check file pattern settings to ensure all files are included
-                    - Right-click lists to access context menus for additional options
-                    - Check the status bar at the bottom for operation progress
-                    - If conversion fails, try different settings or check file permissions
-                    """
-
-        # Create a simple help dialog
-        dialog = tk.Toplevel(self.root)
-        dialog.title("Help")
-        dialog.geometry("600x500")
-        dialog.transient(self.root)
-        
-        # Create a scrollable text widget
         frame = ttk.Frame(dialog)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
-        
+
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side="right", fill="y")
-        
-        text = tk.Text(frame, wrap="word", yscrollcommand=scrollbar.set)
+
+        text = tk.Text(frame, wrap="word", yscrollcommand=scrollbar.set, font=FONTS['body'])
         text.pack(fill="both", expand=True)
         scrollbar.config(command=text.yview)
-        
-        # Insert help content
+
         text.insert("1.0", help_text)
-        
-        text.config(state="disabled")  # Make text read-only
-        
-        # Add a close button
+        text.config(state="disabled")
+
         ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=10)
-        
-        # Center the dialog
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-    
-    def check_updates(self):
-        """Check for application updates"""
-        messagebox.showinfo("Updates", f"You have the latest version ({VERSION}) of p2i.")
-    
-    def show_about(self):
-        """Show about dialog"""
-        about_text = f"""p2i - Advanced PDF Processing GUI
-Version {VERSION}
+        self._center_dialog(dialog)
 
-A comprehensive toolkit for PDF and image processing.
+    def show_ghostscript_help(self):
+        dialog = self._create_dialog("Ghostscript Setup Guide", "550x400", grab=False)
 
-This application provides a user-friendly interface for:
-- PDF merging, splitting, and compression
-- PDF to image conversion
-- Image to PDF conversion
-- PDF security and watermarking
-- Image batch processing
-- Office document to PDF conversion
+        from ghostscript_utils import get_ghostscript
+        gs_exe, gs_ver = get_ghostscript()
 
-© 2025 p2i Team
+        frame = ttk.Frame(dialog, padding=15)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="Ghostscript Setup Guide", style="Heading.TLabel").pack(anchor="w", pady=(0, 10))
+
+        if gs_exe:
+            status_text = f"Ghostscript is installed (v{gs_ver})\nPath: {gs_exe}"
+            status_fg = COLORS['success']
+        else:
+            status_text = "Ghostscript is NOT installed or not found in PATH."
+            status_fg = COLORS['error']
+
+        tk.Label(frame, text=status_text, fg=status_fg, font=FONTS['body'], anchor="w",
+                 justify="left", bg=COLORS['bg']).pack(fill="x", pady=(0, 10))
+
+        guide = """Ghostscript provides the best PDF compression quality.
+
+Installation Steps:
+1. Download from: https://www.ghostscript.com/releases/gsdnld.html
+2. Run the installer (choose the 64-bit version for modern Windows)
+3. During installation, check "Add to PATH" if available
+4. If not, manually add the Ghostscript bin folder to your system PATH:
+   e.g., C:\\Program Files\\gs\\gs10.x.x\\bin
+5. Restart p2i after installation
+
+To verify: open a terminal and run: gswin64c --version
 """
-        messagebox.showinfo("About p2i", about_text)
-    
+        text = tk.Text(frame, wrap="word", font=FONTS['body'], height=12, bg=COLORS['bg_card'])
+        text.pack(fill="both", expand=True)
+        text.insert("1.0", guide)
+        text.config(state="disabled")
+
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(fill="x", padx=15, pady=10)
+        ttk.Button(btn_frame, text="Download Ghostscript", style="Accent.TButton",
+                   command=lambda: webbrowser.open("https://www.ghostscript.com/releases/gsdnld.html")).pack(side="left", padx=(0, 8))
+        ttk.Button(btn_frame, text="Close", command=dialog.destroy, style="Secondary.TButton").pack(side="left")
+
+        self._center_dialog(dialog)
+
+    def show_shortcuts(self):
+        dialog = self._create_dialog("Keyboard Shortcuts", "400x250", grab=False)
+
+        shortcuts = [
+            ("Ctrl+O", "Open PDF file"),
+            ("Ctrl+I", "Open image file"),
+            ("Ctrl+,", "Open Preferences"),
+            ("Ctrl+Q", "Exit application"),
+            ("F1", "Open User Guide"),
+        ]
+
+        frame = ttk.Frame(dialog, padding=15)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="Keyboard Shortcuts", style="Heading.TLabel").pack(anchor="w", pady=(0, 10))
+
+        for key, desc in shortcuts:
+            row = ttk.Frame(frame)
+            row.pack(fill="x", pady=2)
+            tk.Label(row, text=key, font=('Consolas', 10, 'bold'), width=12, anchor="w",
+                     bg=COLORS['bg']).pack(side="left")
+            ttk.Label(row, text=desc).pack(side="left", padx=5)
+
+        ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=10)
+        self._center_dialog(dialog)
+
+    def check_updates(self):
+        messagebox.showinfo("Updates", f"You have the latest version ({VERSION}) of p2i.")
+
+    def show_about(self):
+        dialog = self._create_dialog("About p2i", "450x400")
+
+        frame = ttk.Frame(dialog, padding=20)
+        frame.pack(fill="both", expand=True)
+
+        ttk.Label(frame, text="p2i", font=('Segoe UI', 24, 'bold'),
+                  foreground=COLORS['primary']).pack(pady=(0, 5))
+        ttk.Label(frame, text=f"Version {VERSION}", style="Secondary.TLabel").pack()
+        ttk.Label(frame, text="Advanced PDF & Image Processing Tool",
+                  style="Subheading.TLabel").pack(pady=(10, 15))
+
+        info_text = (
+            "A comprehensive toolkit for PDF and image processing.\n\n"
+            "Features:\n"
+            "  PDF merge, split, compress, convert, secure, organize\n"
+            "  Image convert, resize, watermark, batch process, metadata\n\n"
+            "Built with Python, Tkinter, and Pillow.\n\n"
+            "Developer: Naveen Vasudevan\n"
+            "License: MIT"
+        )
+        ttk.Label(frame, text=info_text, wraplength=380, justify="left").pack(fill="x", pady=(0, 15))
+
+        link_frame = ttk.Frame(frame)
+        link_frame.pack()
+        ttk.Button(link_frame, text="GitHub", style="Secondary.TButton",
+                   command=lambda: webbrowser.open("https://github.com/kuroonai/p2i")).pack(side="left", padx=5)
+        ttk.Button(link_frame, text="Report Issue", style="Secondary.TButton",
+                   command=lambda: webbrowser.open("https://github.com/kuroonai/p2i/issues")).pack(side="left", padx=5)
+        ttk.Button(link_frame, text="Support", style="Accent.TButton",
+                   command=lambda: [dialog.destroy(), self.notebook.select(self._tab_indices['support'])]).pack(side="left", padx=5)
+
+        ttk.Label(frame, text="\u00a9 2025 Naveen Vasudevan", style="Secondary.TLabel").pack(pady=(10, 0))
+
+        ttk.Button(dialog, text="Close", command=dialog.destroy).pack(pady=10)
+        self._center_dialog(dialog)
+
     def on_close(self):
-        """Handle application close"""
-        # Save any settings if needed
         self.settings.save_settings()
-        
-        # Destroy the root window
         self.root.destroy()
+
 
 def main():
     try:
@@ -866,6 +820,7 @@ def main():
         root = tk.Tk()
     app = P2IApp(root)
     root.mainloop()
-    
+
+
 if __name__ == "__main__":
     main()
