@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \":*)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''main.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(D:/condaenv/p2i/python.exe --version)",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import pypdfium2; import PyPDF2; import PIL; import reportlab; print\\(''Core packages OK''\\)\")",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import pdf2image; import tkinterdnd2; import tqdm; print\\(''All packages OK''\\)\")",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import pdf2image; print\\(''pdf2image OK''\\)\")",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import tkinterdnd2; print\\(''tkinterdnd2 OK''\\)\")",
+      "Bash(D:/condaenv/p2i/Scripts/pip.exe install:*)",
+      "Bash(D:/condaenv/p2i/python.exe -c \":*)",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import PyInstaller; print\\(PyInstaller.__version__\\)\")",
+      "Bash(D:/condaenv/p2i/Scripts/pyinstaller.exe p2i.spec --clean --noconfirm)",
+      "Bash(git status:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import tkinter; root = tkinter.Tk\\(\\); print\\(''Tcl version:'', root.tk.eval\\(''info patchlevel''\\)\\); root.destroy\\(\\)\")",
+      "Bash(D:/condaenv/p2i/python.exe -c \"import tkinter; print\\(tkinter.__file__\\); import _tkinter; print\\(_tkinter.__file__\\)\")",
+      "Bash(ls -d D:/condaenv/p2i/tcl* D:/condaenv/p2i/lib/tcl* D:/condaenv/p2i/Library/lib/tcl*)",
+      "Bash(export TCL_LIBRARY=\"D:/condaenv/p2i/Library/lib/tcl8.6\")",
+      "Bash(export TK_LIBRARY=\"D:/condaenv/p2i/Library/lib/tk8.6\")",
+      "Bash(have 8.6.15, need exactly 8.6.13\" because PyInstaller was picking up:*)",
+      "Bash(D:/condaenv/p2i/python.exe -m nuitka --version)",
+      "Bash(D:/condaenv/p2i/python.exe -m nuitka --standalone --onefile --windows-disable-console --windows-icon-from-ico=resources/icon/app_icon.ico --enable-plugin=tk-inter --include-data-dir=resources=resources --output-filename=p2i.exe --output-dir=dist --remove-output --assume-yes-for-downloads main.py)",
+      "Bash(D:/condaenv/p2i/python.exe -m nuitka --standalone --onefile --mingw64 --windows-console-mode=disable --windows-icon-from-ico=resources/icon/app_icon.ico --enable-plugin=tk-inter --include-data-dir=resources=resources --output-filename=p2i.exe --output-dir=dist --remove-output --assume-yes-for-downloads main.py)",
+      "Bash(tee /dev/stderr)",
+      "Bash(where cl.exe)",
+      "Read(//c/Program Files/Microsoft Visual Studio//**)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft Visual Studio//**)",
+      "Bash(env)",
+      "Bash(where gcc.exe)",
+      "Bash(gcc --version)",
+      "Bash(cmd.exe //c set)",
+      "Bash(powershell.exe -Command \"[System.Environment]::GetEnvironmentVariables\\(''''Machine''''\\) + [System.Environment]::GetEnvironmentVariables\\(''''User''''\\) | Out-String\")",
+      "Bash(tr ';' '\\\\n')"
+    ]
+  }
+}
