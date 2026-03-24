@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 import os
+from version import VERSION
 
 # Read the contents of your README file
 this_directory = os.path.abspath(os.path.dirname(__file__))
@@ -8,7 +9,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name="p2i",
-    version="1.0.0",
+    version=VERSION,
     description="PDF & Image Processing Tool",
     long_description=long_description,
     long_description_content_type="text/markdown",

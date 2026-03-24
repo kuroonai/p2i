@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import platform
 import subprocess
+from version import VERSION
 
 class ContributeDialog:
     def __init__(self, parent):
@@ -325,7 +326,7 @@ class ContributeDialog:
         system_info = (
             f"Operating System: {platform.system()} {platform.release()}\n"
             f"Python Version: {platform.python_version()}\n"
-            f"p2i Version: 1.0.0\n"  # Replace with actual version
+            f"p2i Version: {VERSION}\n"
         )
         
         info_frame = ttk.LabelFrame(tab, text="System Information")

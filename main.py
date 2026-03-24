@@ -25,17 +25,22 @@ from support_tab import SupportTab
 from settings import Settings
 from drag_drop import DragDropManager
 from styles import apply_modern_theme, COLORS, FONTS
+from version import VERSION
 
 class P2IApp:
     def __init__(self, root):
         self.root = root
         self.root.title("p2i - PDF & Image Processing Tool")
         self.root.geometry("900x700")
+        self.root.state('zoomed')
 
         # Handle resource paths differently when running as script vs executable
         if getattr(sys, 'frozen', False):
-            # Running as executable
+            # Running as PyInstaller executable
             application_path = sys._MEIPASS  # type: ignore
+        elif "__compiled__" in dir():
+            # Running as Nuitka executable
+            application_path = os.path.dirname(os.path.abspath(sys.argv[0]))
         else:
             # Running as script
             application_path = os.path.dirname(os.path.abspath(__file__))
@@ -177,7 +182,7 @@ class P2IApp:
 
         dnd_text = "Drag & Drop enabled" if self.dnd_manager.is_available() else "Drag & Drop unavailable"
         self.status_bar = tk.Label(status_frame,
-            text=f"  p2i v1.0.0  |  {dnd_text}",
+            text=f"  p2i v{VERSION}  |  {dnd_text}",
             font=FONTS['caption'],
             fg=COLORS['text_muted'],
             bg=COLORS['bg_card'],
@@ -824,12 +829,12 @@ class P2IApp:
     
     def check_updates(self):
         """Check for application updates"""
-        messagebox.showinfo("Updates", "You have the latest version (1.0.0) of p2i.")
+        messagebox.showinfo("Updates", f"You have the latest version ({VERSION}) of p2i.")
     
     def show_about(self):
         """Show about dialog"""
-        about_text = """p2i - Advanced PDF Processing GUI
-Version 1.0.0
+        about_text = f"""p2i - Advanced PDF Processing GUI
+Version {VERSION}
 
 A comprehensive toolkit for PDF and image processing.
 
@@ -854,7 +859,11 @@ This application provides a user-friendly interface for:
         self.root.destroy()
 
 def main():
-    root = tk.Tk()
+    try:
+        from tkinterdnd2 import TkinterDnD
+        root = TkinterDnD.Tk()
+    except ImportError:
+        root = tk.Tk()
     app = P2IApp(root)
     root.mainloop()
     
