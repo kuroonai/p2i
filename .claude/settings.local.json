@@ -36,7 +36,8 @@
       "Bash(cmd.exe //c set)",
       "Bash(powershell.exe -Command \"[System.Environment]::GetEnvironmentVariables\\(''''Machine''''\\) + [System.Environment]::GetEnvironmentVariables\\(''''User''''\\) | Out-String\")",
       "Bash(tr ';' '\\\\n')",
-      "Bash(grep -r \"1\\\\.0\\\\.0\\\\|1\\\\.1\\\\.0\" /d/OneDrive/GitHubrepos/p2i/*.py)"
+      "Bash(grep -r \"1\\\\.0\\\\.0\\\\|1\\\\.1\\\\.0\" /d/OneDrive/GitHubrepos/p2i/*.py)",
+      "Bash(gh --version)"
     ]
   }
 }

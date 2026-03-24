@@ -141,6 +141,10 @@ nuitka-crash-report.xml
 *.build/
 *.onefile-build/
 
+# Guides
+CROSS_PLATFORM_BUILD.md
+LOCALIZATION_GUIDE.md
+
 # Inno Setup output
 installer_output/
 
